@@ -1,0 +1,62 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  13
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       volScalarField;
+    object      nN2p;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 -3 0 0 0 0 0];
+
+nBound          0.0;
+internalField   uniform $nBound;
+
+boundaryField
+{
+    INLET
+    {
+        type            zeroGradient;
+    }
+
+    OUTLET
+    {
+        type            zeroGradient;
+    }
+
+    WALL
+    {
+        type            zeroGradient;
+    }
+
+    frontAndBackPlanes
+    {
+        type            empty;
+    }
+
+    PELEMENT
+    {
+        // ions are created close to the boundary
+        type            zeroGradient;
+        // at the boundary there are no ions
+        //type            fixedValue;
+        //value           uniform $nBound;
+    }
+
+    NELEMENT
+    {
+        // positive ions are absorbed at the rear cathode
+        type            fixedValue;
+        value           uniform $nBound;
+        // the ion impact results in secondary electron emission see ne
+        //type            zeroGradient;
+    }
+}
+
+// ************************************************************************* //

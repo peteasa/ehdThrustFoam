@@ -1,0 +1,55 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  13
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      momentumTransport;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// simulationType RAS;
+simulationType laminar;
+laminar
+{
+    model           Stokes;
+    nu              nu       [ 0 2 -1 0 0 0 0 ] 8.58e-06;
+}
+
+RAS
+{
+    model               kOmegaSST;
+
+    turbulence          on;
+}
+
+LES
+{
+    model               SpalartAllmarasDDES;
+    delta               cubeRootVol;
+
+    turbulence          on;
+
+    cubeRootVolCoeffs
+    {
+        deltaCoeff      1;
+    }
+
+    smoothCoeffs
+    {
+        delta           cubeRootVol;
+        cubeRootVolCoeffs
+        {
+            deltaCoeff      1;
+        }
+        maxDeltaRatio   1.1;
+    }
+}
+
+// ************************************************************************* //

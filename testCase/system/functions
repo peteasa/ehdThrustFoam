@@ -1,0 +1,179 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  13
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    object      functions;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+minMax
+{
+    type coded;
+
+    executeControl  writeTime;  // timeStep; // for more samples output but possible overwrite // writeTime;  // for fewer samples
+    writeControl    writeTime;  // timeStep; // writeTime;
+
+    libs ("libutilityFunctionObjects.so");
+    region "region0";   // must match mesh region
+
+    codeInclude
+    #{
+        #include "OFstream.H"
+        #include "OSspecific.H"
+        // for phi min/max calculation
+        #include "surfaceFields.H"
+        #include "surfaceMesh.H"
+        #include "fvc.H"
+    #};
+
+    codeData
+    #{
+        autoPtr<OFstream> outFile;
+    #};
+
+    codeRead
+    #{
+        fileName dir
+        (
+            mesh().time().globalPath()/
+            "postProcessing"/
+            mesh().time().name()/
+            name()
+        );
+
+        mkDir(dir);
+        outFile = new OFstream(dir/"minMax.dat");
+
+        // Print a short file header
+        outFile()
+            << "#Time "
+            << "minU maxU "
+            << "minPhi maxPhi "
+            << "minP maxP "
+            << "minNe maxNe "
+            << "minNN2p maxNN2p "
+            << "minPhiE maxPhiE "
+            << "minE maxE"
+            << nl;
+    #};
+
+    codeExecute
+    #{
+        try
+        {
+            const scalar NaN = std::numeric_limits<scalar>::quiet_NaN();
+
+            // Initialise all values
+            scalar minU=NaN, maxU=NaN;
+            scalar minPhi=NaN, maxPhi=NaN;
+            scalar minP=NaN, maxP=NaN;
+            scalar minNe=NaN, maxNe=NaN;
+            scalar minNN2p=NaN, maxNN2p=NaN;
+            scalar minPhiE=NaN, maxPhiE=NaN;
+            scalar minE=NaN, maxE=NaN;
+
+            // ---- U ----
+            if (mesh().foundObject<volVectorField>("U"))
+            {
+                const volVectorField& U =
+                    mesh().lookupObject<volVectorField>("U");
+
+                volScalarField magU(mag(U));
+                minU = gMin(magU);
+                maxU = gMax(magU);
+            }
+
+            // ---- phi ----
+            if (mesh().foundObject<surfaceScalarField>("phi"))
+            {
+                const surfaceScalarField& phi =
+                    mesh().lookupObject<surfaceScalarField>("phi");
+
+                minPhi = gMin(phi);
+                maxPhi = gMax(phi);
+            }
+
+            // ---- p ----
+            if (mesh().foundObject<volScalarField>("p"))
+            {
+                const volScalarField& p =
+                    mesh().lookupObject<volScalarField>("p");
+
+                volScalarField magP(mag(p));
+                minP = gMin(magP);
+                maxP = gMax(magP);
+            }
+
+            // ---- ne ----
+            if (mesh().foundObject<volScalarField>("ne"))
+            {
+                const volScalarField& ne =
+                    mesh().lookupObject<volScalarField>("ne");
+
+                volScalarField magNe(mag(ne));
+                minNe = gMin(magNe);
+                maxNe = gMax(magNe);
+            }
+
+            // ---- nN2p ----
+            if (mesh().foundObject<volScalarField>("nN2p"))
+            {
+                const volScalarField& f =
+                    mesh().lookupObject<volScalarField>("nN2p");
+
+                volScalarField magF(mag(f));
+                minNN2p = gMin(magF);
+                maxNN2p = gMax(magF);
+            }
+
+            // ---- phiE ----
+            if (mesh().foundObject<volScalarField>("phiE"))
+            {
+                const volScalarField& f =
+                    mesh().lookupObject<volScalarField>("phiE");
+
+                volScalarField magF(mag(f));
+                minPhiE = gMin(magF);
+                maxPhiE = gMax(magF);
+            }
+
+            // ---- E ----
+            if (mesh().foundObject<volVectorField>("E"))
+            {
+                const volVectorField& E =
+                    mesh().lookupObject<volVectorField>("E");
+
+                volScalarField magE(mag(E));
+                minE = gMin(magE);
+                maxE = gMax(magE);
+            }
+
+            outFile()
+                    << time_.name() << " "
+                    << minU << " " << maxU << " "
+                    << minPhi << " " << maxPhi << " "
+                    << minP << " " << maxP << " "
+                    << minNe << " " << maxNe << " "
+                    << minNN2p << " " << maxNN2p << " "
+                    << minPhiE << " " << maxPhiE << " "
+                    << minE << " " << maxE
+                    << nl;
+        }
+        catch(...)
+        {
+            Warning << "minMax functionObject failed at time "
+                    << time_.name() << nl;
+        }
+    #};
+}
+
+#includeFunc residuals
+
+// ************************************************************************* //

@@ -1,0 +1,12 @@
+#!/bin/sh
+cd ${0%/*} || exit 1    # Run from this directory
+
+rm -f log.*
+
+rm -rf dynamicCode
+rm -rf constant/polyMesh
+rm -rf postProcessing results allResults.dat
+
+./Allcleansimulation
+
+#------------------------------------------------------------------------------

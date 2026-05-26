@@ -1,0 +1,67 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  13
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       volVectorField;
+    object      U;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 1 -1 0 0 0 0];
+
+angle           12;
+
+//magnitude       51.4815;
+//magnitude       1.0;
+//magnitude       0.5;
+magnitude       0.1;
+
+radAngle        #calc "degToRad($angle)";
+
+internalField   uniform ( #calc "$magnitude*cos($radAngle)" #calc "$magnitude*sin($radAngle)" 0 );
+
+boundaryField
+{
+    INLET
+    {
+        type            freestreamVelocity;
+        freestreamValue $internalField;
+    }
+
+    OUTLET
+    {
+        type            pressureInletOutletVelocity;
+        value           uniform (0 0 0);
+        // type            zeroGradient;
+    }
+
+    WALL
+    {
+        type            noSlip;
+    }
+
+    PELEMENT
+    {
+        type            noSlip;
+    }
+
+    NELEMENT
+    {
+        type            noSlip;
+    }
+
+    frontAndBackPlanes
+    {
+        type            empty;
+    }
+
+    #includeEtc "caseDicts/setConstraintTypes"
+}
+
+// ************************************************************************* //

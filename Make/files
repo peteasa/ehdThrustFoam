@@ -1,0 +1,9 @@
+testCase  =  testCase
+testCaseSystem  =  testCase/system
+testCaseConstant  =  testCase/constant
+testCaseConstantGeometry  =  testCase/constant/geometry
+testCase0  =  testCase/0
+
+ehdThrustFoam.C
+
+EXE = $(FOAM_USER_APPBIN)/ehdThrustFoam

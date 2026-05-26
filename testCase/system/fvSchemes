@@ -1,0 +1,92 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  13
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    object      fvSchemes;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+ddtSchemes
+{
+    //default          steadyState;
+    default          Euler;
+}
+
+gradSchemes
+{
+    default         Gauss linear;
+
+    limited         cellLimited Gauss linear 1;
+    grad(U)         $limited;
+    grad(k)         $limited;
+    grad(omega)     $limited;
+}
+
+divSchemes
+{
+    default         none;
+
+    // For steady-state, use the bounded form of advection schemes
+#ifeq $!ddtSchemes/default steadyState
+    div(phi,U)      bounded Gauss linearUpwind limited;
+    turbulence      bounded Gauss limitedLinear 1;
+#else
+    div(phi,U)      Gauss linearUpwind limited;
+    turbulence      Gauss limitedLinear 1;
+#endif
+
+    div(phi,k)      $turbulence;
+    div(phi,omega)  $turbulence;
+    div(phi,epsilon) $turbulence;
+
+    div((nuEff*dev2(T(grad(U))))) Gauss linear;
+
+    div(phid_e,ne)     bounded Gauss upwind;
+    div(phid_N2p,nN2p) bounded Gauss upwind;
+    div(phiEFlux_e,ne)     bounded Gauss upwind;
+    div(phiEFlux_N2p,nN2p) bounded Gauss upwind;
+
+    div(interpolate((-mu_e*E)),ne)   Gauss upwind;
+    div(interpolate((mu_N2p*E)),nN2p)   Gauss upwind;
+
+    div(Jtotal)      Gauss linear;
+}
+
+laplacianSchemes
+{
+    default         Gauss linear corrected;
+
+    laplacian(De,ne)      Gauss linear corrected;
+    laplacian(DN2p,nN2p)  Gauss linear corrected;
+}
+
+interpolationSchemes
+{
+    default         linear;
+}
+
+snGradSchemes
+{
+    default         corrected;
+}
+
+wallDist
+{
+    method meshWave;
+}
+
+fluxRequired
+{
+    default         no;
+    p;
+    phi;
+}
+
+// ************************************************************************* //

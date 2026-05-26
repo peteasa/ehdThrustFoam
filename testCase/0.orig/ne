@@ -1,0 +1,141 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  13
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       volScalarField;
+    object      ne;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 -3 0 0 0 0 0];
+
+nBound          0.0;
+internalField   uniform $nBound;
+
+boundaryField
+{
+    INLET
+    {
+        type            zeroGradient;
+    }
+
+    OUTLET
+    {
+        type            zeroGradient;
+    }
+
+    WALL
+    {
+        type            zeroGradient;
+    }
+
+    frontAndBackPlanes
+    {
+        type            empty;
+    }
+
+    PELEMENT
+    {
+        // electrons absorbed at the front anode
+        type            fixedValue;
+        value           uniform $nBound;
+    }
+
+    NELEMENT
+    {
+        type            codedMixed;
+        name            neGradientBC;
+
+        refValue        uniform 0;
+        refGradient     uniform 0;
+        valueFraction   uniform 0;
+
+        code
+        #{
+        const fvPatch& p = patch();
+
+        tmp<scalarField> tNeInternal = patchInternalField();
+        const scalarField& neInternal = tNeInternal();
+
+        tmp<scalarField> tNN2pInternal =
+            p.lookupPatchField<volScalarField, scalar>("nN2p").patchInternalField();
+        const scalarField& nN2pInternal = tNN2pInternal();
+
+        const vectorField& Epatch =
+            p.lookupPatchField<volVectorField, vector>("E");
+
+        scalarField& refVal = this->refValue();
+        scalarField& refGrad = this->refGrad();
+        scalarField& valFrac = this->valueFraction();
+
+        refVal = 0.0;
+        refGrad = 0.0;
+        valFrac = 0.0;
+
+        const dictionary& physical =
+            db().lookupObject<IOdictionary>("physicalProperties");
+
+        dimensionedScalar mu_e_dim(physical.lookup("mu_e"));
+        dimensionedScalar mu_i_dim(physical.lookup("mu_N2p"));
+        dimensionedScalar Te_dim(physical.lookup("Te"));
+
+        const scalar mu_e = mu_e_dim.value();
+        const scalar mu_i = mu_i_dim.value();
+        const scalar Te = Te_dim.value();
+
+        const scalar De = mu_e * Te;
+
+        // emission coefficient 0.01 – 0.2 air discharges
+        dimensionedScalar gamma_dim(physical.lookup("gamma"));
+        const scalar gamma = gamma_dim.value();
+
+        // outward normal
+        vectorField nHat = p.nf();
+
+        scalar nemin = 0.0;
+        scalar nN2pmin = 0.0;
+
+        forAll(refGrad, i)
+        {
+            scalar En = (Epatch[i] & nHat[i]);
+
+            scalar ne = neInternal[i]; // max(neInternal[i], nemin);
+            // discourage unphysical negative densities
+            ne = 0 < ne? ne : ne + 0.01 * (0 - ne);
+            scalar ni = nN2pInternal[i]; // max(nN2pInternal[i], nN2pmin);
+            // discourage unphysical negative densities
+            ni = 0 < ni? ni : ni + 0.01 * (0 - ni);
+
+            // ion flux towards the boundary
+            scalar Gamma_i = max(0.0, mu_i * ni * En);
+
+            // electron flux towards the boundary
+            scalar Gamma_e_in = max(0.0, -mu_e * ne * En);
+
+            scalar Gamma_e = gamma * Gamma_i - Gamma_e_in;
+
+            // control the value
+            refVal[i] = ne;
+            valFrac[i] = 0.0;
+
+            // dne/dn
+            scalar grad = - (Gamma_e + mu_e * ne * En) / De;
+
+            // apply relaxation
+            refGrad[i] = refGrad[i] + 0.1 * (grad - refGrad[i]);
+            // discourage unphysical excitation
+            if (En < 1e-6) { refGrad[i] = 0; }
+            if (neInternal[i] < nemin) { refGrad[i] = 0; }
+            if (nN2pInternal[i] < nN2pmin) { refGrad[i] = 0; }
+        }
+        #};
+    }
+}
+
+// ************************************************************************* //
