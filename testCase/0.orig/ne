@@ -42,9 +42,56 @@ boundaryField
 
     PELEMENT
     {
+        /*
         // electrons absorbed at the front anode
         type            fixedValue;
         value           uniform $nBound;
+        */
+        type codedMixed;
+        name nePositivityBC;
+        refValue uniform 0;
+        refGradient uniform 0;
+        valueFraction uniform 0;
+
+        code
+        #{
+        tmp<scalarField> tNeInternal = patchInternalField();
+        const scalarField& neInternal = tNeInternal();
+
+        scalarField& refVal = this->refValue();
+        scalarField& refGrad = this->refGrad();
+        scalarField& valFrac = this->valueFraction();
+
+        scalar nethreshold = 0.0;
+
+        forAll(refGrad, i)
+        {
+            scalar ne = neInternal[i];
+            scalar before = ne;
+
+            scalar current = this->operator[](i);
+            scalar currentGrad = (ne - this->operator[](i)) * patch().deltaCoeffs()[i];
+
+            // discourage un-physical negative densities
+            ne = max(ne, 0);
+
+            // normal gradient
+            refGrad[i] = currentGrad + 0.1 * (0 - currentGrad);
+
+            // enforced boundary value if valFrac[i] = 1
+            refVal[i] = ne;
+
+            // flux driven - Neumann like (valFrac=0) ; value driven - Dirichlet like (valFrac=1)
+            // more weighted gradient if internal density is positive
+            scalar safetyFactor = 0.2;
+            valFrac[i] = 0.8 + safetyFactor * (neInternal[i] < nethreshold ? 1.0 : 0.0);
+
+            if (0) // (current < 0)
+            {
+                Info << "PELEMENT ne current = " << current << " refVal= " << refVal[i] << " currentGrad = " << currentGrad << nl;
+            }
+        }
+        #};
     }
 
     NELEMENT
@@ -98,19 +145,22 @@ boundaryField
         // outward normal
         vectorField nHat = p.nf();
 
-        scalar nemin = 0.0;
-        scalar nN2pmin = 0.0;
+        scalar nethreshold = 0.0;
 
         forAll(refGrad, i)
         {
+            scalar ne = neInternal[i];
+            scalar before = ne;
+
+            scalar current = this->operator[](i);
+            scalar currentGrad = (ne - this->operator[](i)) * patch().deltaCoeffs()[i];
+
             scalar En = (Epatch[i] & nHat[i]);
 
-            scalar ne = neInternal[i]; // max(neInternal[i], nemin);
-            // discourage unphysical negative densities
-            ne = 0 < ne? ne : ne + 0.01 * (0 - ne);
-            scalar ni = nN2pInternal[i]; // max(nN2pInternal[i], nN2pmin);
-            // discourage unphysical negative densities
-            ni = 0 < ni? ni : ni + 0.01 * (0 - ni);
+            // discourage un-physical negative densities
+            ne = max(ne, 0);
+
+            scalar ni = max(nN2pInternal[i], 0);
 
             // ion flux towards the boundary
             scalar Gamma_i = max(0.0, mu_i * ni * En);
@@ -120,19 +170,29 @@ boundaryField
 
             scalar Gamma_e = gamma * Gamma_i - Gamma_e_in;
 
-            // control the value
+            // enforced boundary value if valFrac[i] = 1
             refVal[i] = ne;
-            valFrac[i] = 0.0;
+
+            // flux driven - Neumann like (valFrac=0) ; value driven - Dirichlet like (valFrac=1)
+            // apply more fixed value Dirichlet like boundary if internal density is negative
+            scalar safetyFactor = 0.15;
+            valFrac[i] = 0.05 + safetyFactor * (current < nethreshold ? 1.0 : 0.0);
 
             // dne/dn
             scalar grad = - (Gamma_e + mu_e * ne * En) / De;
 
             // apply relaxation
-            refGrad[i] = refGrad[i] + 0.1 * (grad - refGrad[i]);
+            refGrad[i] = currentGrad + 0.1 * (grad - currentGrad);
+
             // discourage unphysical excitation
             if (En < 1e-6) { refGrad[i] = 0; }
-            if (neInternal[i] < nemin) { refGrad[i] = 0; }
-            if (nN2pInternal[i] < nN2pmin) { refGrad[i] = 0; }
+            if (neInternal[i] < 0) { refGrad[i] = 0; }
+            if (nN2pInternal[i] < 0) { refGrad[i] = 0; }
+
+            if (0) //(current < 0)
+            {
+                Info << "NELEMENT ne current = " << current << " refVal= " << refVal[i] << " currentGrad = " << currentGrad << nl;
+            }
         }
         #};
     }

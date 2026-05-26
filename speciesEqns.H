@@ -67,6 +67,31 @@ if (1)
     Info << "internal min/max nN2p: " << min(nN2p.internalField()).value() << " " << max(nN2p.internalField()).value() << endl;
 }
 
+if (1)
+{
+    label nePatchID = mesh.boundaryMesh().findIndex("NELEMENT");
+    if (nePatchID < 0)
+    {
+        FatalErrorInFunction
+            << "Patch NELEMENT not found"
+            << exit(FatalError);
+    }
+
+    const fvPatchScalarField& nepatch = ne.boundaryField()[nePatchID];
+    Info << "min/max ne at NELEMENT boundary: " << gMin(nepatch) << " " << gMax(nepatch) << endl;
+
+    label pePatchID = mesh.boundaryMesh().findIndex("PELEMENT");
+    if (pePatchID < 0)
+    {
+        FatalErrorInFunction
+            << "Patch PELEMENT not found"
+            << exit(FatalError);
+    }
+
+    const fvPatchScalarField& pepatch = ne.boundaryField()[pePatchID];
+    Info << "min/max ne at PELEMENT boundary: " << gMin(pepatch) << " " << gMax(pepatch) << endl;
+}
+
 // balancing of charge causes big error in ne
 volScalarField chargeError = nN2p - ne;
 Info << " chargeError min/max: " << min(chargeError.internalField()).value() << " " << max(chargeError.internalField()).value() << endl;

@@ -84,27 +84,27 @@ int main(int argc, char *argv[])
 
     scalar dtUpperLimit = 1e-6;
     List<scalar> dtLowerLimits(11, 1.25892541179417e-9);
-    List<scalar> reactionRateLimits(11, 7.94328234724283e+5);
+    List<scalar> reactionRateLimits(11, 7.94328234724283e+0);
     dtLowerLimits[9] = 1.58489319246111e-9;
-    reactionRateLimits[9] = 6.30957344480194e+5;
+    reactionRateLimits[9] = 6.30957344480194e+0;
     dtLowerLimits[8] = 1.99526231496888e-9;
-    reactionRateLimits[8] = 5.01187233627273e+5;
+    reactionRateLimits[8] = 5.01187233627273e+0;
     dtLowerLimits[7] = 2.51188643150958e-9;
-    reactionRateLimits[7] = 3.98107170553498e+5;
+    reactionRateLimits[7] = 3.98107170553498e+0;
     dtLowerLimits[6] = 3.16227766016838e-9;
-    reactionRateLimits[6] = 3.16227766016838e+5;
+    reactionRateLimits[6] = 3.16227766016838e+0;
     dtLowerLimits[5] = 3.98107170553497e-9;
-    reactionRateLimits[5] = 2.51188643150958e+5;
+    reactionRateLimits[5] = 2.51188643150958e+0;
     dtLowerLimits[4] = 5.01187233627272e-9;
-    reactionRateLimits[4] = 1.99526231496888e+5;
+    reactionRateLimits[4] = 1.99526231496888e+0;
     dtLowerLimits[3] = 6.30957344480193e-9;
-    reactionRateLimits[3] = 1.58489319246111e+5;
+    reactionRateLimits[3] = 1.58489319246111e+0;
     dtLowerLimits[2] = 5.56029764306997e-9;
-    reactionRateLimits[2] = 1.25892541179417e+5;
+    reactionRateLimits[2] = 1.25892541179417e+0;
     dtLowerLimits[1] = 5e-9;
-    reactionRateLimits[1] = 1e+5;
+    reactionRateLimits[1] = 1e+0;
     dtLowerLimits[0] = 3.7767762353825e-9;
-    reactionRateLimits[0] = 7.94328234724282e+4;
+    reactionRateLimits[0] = 7.94328234724282e-1;
     scalar reactionRateScale = 1.258925411794;
 
     Info<< "currentTime = " << runTime.name() << nl;
