@@ -14,12 +14,12 @@ n_thrust_surface_points = 2*n_points_per_side
 thrust_surface_length = 0.3
 thrust_surface_height = 0.1
 bounding_radius=0.10
-electrode_position=-0.02
-electrode_radius=0.01
+electrode_position=-0.011
+electrode_radius=0.001
 far_field_mesh_size=0.002
 thrust_topsurface_mesh_size=0.0005
-thrust_surface_mesh_size=0.0015
-electrode_mesh_size=0.0004
+thrust_surface_mesh_size=0.001
+electrode_mesh_size=0.0001
 run(`./set_config_property.sh name unstructured_gmsh_$(thrust_surface_mesh_size)_$(far_field_mesh_size)`)
 touch("ehdthrust.geo")
 open("ehdthrust.geo","w")do io

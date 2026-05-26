@@ -1,1 +1,1 @@
-{ "name": "unstructured_gmsh_0.0015_0.002", "cells": "", "maxAspectRatio": "", "turbulence_model": "SpalartAllmaras" }
+{ "name": "unstructured_gmsh_0.001_0.002", "cells": "", "maxAspectRatio": "", "turbulence_model": "SpalartAllmaras" }

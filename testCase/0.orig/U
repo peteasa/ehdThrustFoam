@@ -17,10 +17,10 @@ dimensions      [0 1 -1 0 0 0 0];
 
 angle           12;
 
-//magnitude       51.4815;
+magnitude       51.4815;
 //magnitude       1.0;
 //magnitude       0.5;
-magnitude       0.1;
+//magnitude       0.1;
 
 radAngle        #calc "degToRad($angle)";
 
