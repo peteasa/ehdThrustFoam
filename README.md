@@ -19,6 +19,10 @@ Now change any parameters in the 0.orig, system/*, constant/* folder and run the
 ```
 View the results with paraFoam (see [OpenFOAM user guide](https://doc.cfd.direct/openfoam/user-guide-v13/paraview#dx39-204001)) and with gnuplot (see minmax.gp).
 
+## Provide feedback
+
+You are welcome to provide feedback by responding to an existing issue or creating a new issue on the [issue board] (https://gitlab.com/paracpg/ehdthrustfoam/-/boards).
+
 ## Installation
 
 Requires:
