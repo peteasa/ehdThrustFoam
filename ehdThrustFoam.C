@@ -82,30 +82,14 @@ int main(int argc, char *argv[])
 
     Info<< "\nStarting iteration loop\n" << nl;
 
+    scalar factorMulti = 8.0;
+    int pwr = -9;
+    scalar factor = factorMulti * pow(10.0, pwr);
+    scalar ecoUpperThresh = 0.2;
+    scalar ecoLowerThresh = 0.08;
+    scalar maxEeCo = (ecoUpperThresh + ecoLowerThresh) / 2;
+
     scalar dtUpperLimit = 1e-6;
-    List<scalar> dtLowerLimits(11, 1.25892541179417e-9);
-    List<scalar> reactionRateLimits(11, 7.94328234724283e+0);
-    dtLowerLimits[9] = 1.58489319246111e-9;
-    reactionRateLimits[9] = 6.30957344480194e+0;
-    dtLowerLimits[8] = 1.99526231496888e-9;
-    reactionRateLimits[8] = 5.01187233627273e+0;
-    dtLowerLimits[7] = 2.51188643150958e-9;
-    reactionRateLimits[7] = 3.98107170553498e+0;
-    dtLowerLimits[6] = 3.16227766016838e-9;
-    reactionRateLimits[6] = 3.16227766016838e+0;
-    dtLowerLimits[5] = 3.98107170553497e-9;
-    reactionRateLimits[5] = 2.51188643150958e+0;
-    dtLowerLimits[4] = 5.01187233627272e-9;
-    reactionRateLimits[4] = 1.99526231496888e+0;
-    dtLowerLimits[3] = 6.30957344480193e-9;
-    reactionRateLimits[3] = 1.58489319246111e+0;
-    dtLowerLimits[2] = 5.56029764306997e-9;
-    reactionRateLimits[2] = 1.25892541179417e+0;
-    dtLowerLimits[1] = 5e-9;
-    reactionRateLimits[1] = 1e+0;
-    dtLowerLimits[0] = 3.7767762353825e-9;
-    reactionRateLimits[0] = 7.94328234724282e-1;
-    scalar reactionRateScale = 1.258925411794;
 
     Info<< "currentTime = " << runTime.name() << nl;
     Info<< "endTime     = " << runTime.endTime().value() << nl;
@@ -175,24 +159,35 @@ int main(int argc, char *argv[])
             scalar dt1 = meshDeltaX / (50 * (maxDriftVelocity + SMALL));
             Info << "dt1: " << dt1 << endl;
 
-            scalar reactionRateMax = reactionRateLimits[0];
-            scalar dtLowerLimit = dtLowerLimits[0];
-            for (int i = 1; i < dtLowerLimits.size(); i++)
+            if (ecoUpperThresh < maxEeCo)
             {
-                reactionRateMax = reactionRateLimits[i] / reactionRateScale < maxReactionRate?
-                    reactionRateLimits[i] : reactionRateMax;
-                dtLowerLimit = reactionRateMax == reactionRateLimits[i]?
-                    dtLowerLimits[i] : dtLowerLimit;
+                factorMulti -= 1.0;
+                if (factorMulti < 1.0)
+                {
+                    pwr -= 1;
+                    factorMulti = 9.0;
+                }
+
+                factor = factorMulti * pow(10.0, pwr);
+            }
+            else if (maxEeCo < ecoLowerThresh)
+            {
+                factorMulti += 1.0;
+                if (9.0 < factorMulti)
+                {
+                    pwr += 1;
+                    factorMulti = 1.0;
+                }
+
+                factor = factorMulti * pow(10.0, pwr);
             }
 
-            Info << "dtLowerLimit: " << dtLowerLimit
-                 << " reactionRateMax: " << reactionRateMax << endl;
+            Info << "maxEeCo " << maxEeCo << " factorMulti: " << factorMulti << " pwr: " << pwr << endl;
 
             maxReactionRate = max(maxReactionRate, SMALL);
-            maxReactionRate = min(maxReactionRate, reactionRateMax);
-            scalar dt2 = dtLowerLimit * reactionRateMax / maxReactionRate;
+            scalar dt2 = factor / maxReactionRate;
             Info << "dt2: " << dt2 << endl;
-            scalar deltaT = max(min(dt1, dt2), dtLowerLimit);
+            scalar deltaT = min(dt1, dt2);
             deltaT = min(deltaT, dtUpperLimit);
             Info << "computed new deltaT: " << deltaT << endl;
 
@@ -266,7 +261,7 @@ int main(int argc, char *argv[])
                     surfaceScalarField phiEFlux_e = fvc::flux(-mu_e * E);
                     surfaceScalarField phiEFlux_N2p = fvc::flux(mu_N2p * E);
 
-                    scalar maxEeCo = 0.0;
+                    maxEeCo = 0.0;
                     scalar maxEpCo = 0.0;
                     const scalar dt = runTime.deltaTValue();
 
