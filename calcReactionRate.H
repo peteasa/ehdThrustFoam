@@ -4,9 +4,13 @@ volScalarField magE
     "magE",
     mag(E)
 );
-Info << "min/max magE: " << min(magE).value() << " " << max(magE).value() << endl;
-Info << "internal min/max magE: " << min(mag(E.internalField())).value() << " " << max(mag(E.internalField())).value() << endl;
 
+if (enableDetailedLogs)
+{
+    scalar minE = gMin(magE);
+    scalar maxE = gMax(magE);
+    if (Pstream::master()) Info << "min/max magE: " << minE << " " << maxE << endl;
+}
 
 // ionisation N2 -> N2+ + e-
 // calculate source ion term (Sion) using the Townsend coefficient alpha
@@ -32,7 +36,12 @@ volScalarField magEeff
     mag(Eeff)
 );
 
-Info << "min/max magEeff: " << min(magEeff).value() << " " << max(magEeff).value() << endl;
+if (enableDetailedLogs)
+{
+    scalar minEeff = gMin(magEeff);
+    scalar maxEeff = gMax(magEeff);
+    if (Pstream::master()) Info << "min/max magEeff: " << minEeff << " " << maxEeff << endl;
+}
 
 // Townsend coefficient
 volScalarField alphaRaw
@@ -42,7 +51,12 @@ volScalarField alphaRaw
 );
 
 alphaRaw = min(alphaRaw, dimensionedScalar("alphaMax", alphaRaw.dimensions(), 1e5));
-Info << "min/max alphaRaw: " << min(alphaRaw).value() << " " << max(alphaRaw).value() << endl;
+if (enableDetailedLogs)
+{
+    scalar minAlphaRaw = gMin(alphaRaw);
+    scalar maxAlphaRaw = gMax(alphaRaw);
+    if (Pstream::master()) Info << "min/max alphaRaw: " << minAlphaRaw << " " << maxAlphaRaw << endl;
+}
 
 volScalarField ionSwitch  // ionSwitch may not be needed
 (
@@ -63,7 +77,12 @@ volScalarField Sion
     min(SionRaw * ionSwitch, Smax)
 );
 
-Info << "internal min/max Sion: " << min(Sion.internalField()).value() << " " << max(Sion.internalField()).value() << endl;
+if (enableDetailedLogs)
+{
+    scalar minSion = gMin(Sion.internalField());
+    scalar maxSion = gMax(Sion.internalField());
+    if (Pstream::master()) Info << "internal min/max Sion: " << minSion << " " << maxSion << endl;
+}
 
 // recombination
 // e- + N2+ -> N2
@@ -74,7 +93,12 @@ volScalarField Rei
     kei * ne * nN2p
 );
 
-Info << "internal min/max Rei: " << min(Rei.internalField()).value() << " " << max(Rei.internalField()).value() << endl;
+if (enableDetailedLogs)
+{
+    scalar minRei = gMin(Rei.internalField());
+    scalar maxRei = gMax(Rei.internalField());
+    if (Pstream::master()) Info << "internal min/max Rei: " << minRei << " " << maxRei << endl;
+}
 
 volScalarField reactionRate
 (
@@ -83,5 +107,11 @@ volScalarField reactionRate
     Sion + Rei
 );
 
-scalar maxReactionRate = gMax(mag(reactionRate.primitiveField()));
-Info << "maxReactionRate: " << maxReactionRate << endl;
+volScalarField magRR
+(
+     "magRR",
+     mag(reactionRate)
+);
+
+scalar maxReactionRate = gMax(magRR);
+if (Pstream::master() && enableDetailedLogs) Info << "maxReactionRate: " << maxReactionRate << endl;

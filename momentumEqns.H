@@ -1,11 +1,22 @@
 volVectorField FEHD = rhoE * E;
-Info << "min/max FEHD: " << min(mag(FEHD)).value() << " " << max(mag(FEHD)).value() << endl;
+if (enableDetailedLogs)
+{
+    volScalarField magF
+    (
+         "magF",
+         mag(FEHD)
+    );
+
+    scalar minmagF = gMin(magF);
+    scalar maxmagF = gMax(magF);
+    if (Pstream::master()) Info << "min/max FEHD: " << minmagF << " " << maxmagF << endl;
+}
 
 if (0)
 {
     if (1 && (runTime.value() < 3e-5))
     {
-        Info << "DEBUG: Separate electrostatic interaction" << endl;
+        Info << "DEBUG: Separate electrostatic interaction @ time: " << runTime.name() << endl;
         FEHD = dimensionedVector("zv", FEHD.dimensions(), vector::zero);
     } else {
         dimensionedScalar fScale("fScale", dimless, 1e-14);

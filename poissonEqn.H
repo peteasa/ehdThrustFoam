@@ -21,6 +21,11 @@ phiEqn.relax();
 SolverPerformance<scalar> phiEPerf = phiEqn.solve();
 
 // Print Poisson residual
-Info << "Residual phiE = " << phiEPerf.finalResidual() << endl;
+if (Pstream::master() && enableDetailedLogs) Info << "Residual phiE = " << phiEPerf.finalResidual() << endl;
 
-Info << "min/max phiE: " << min(phiE).value() << " " << max(phiE).value() << " phiE range = " << mag(gMax(phiE) - gMin(phiE)) << endl;
+if (enableDetailedLogs)
+{
+    scalar minPhiE = gMin(phiE);
+    scalar maxPhiE = gMax(phiE);
+    if (Pstream::master()) Info << "min/max phiE: " << minPhiE << " " << maxPhiE << " phiE range = " << mag(maxPhiE - minPhiE) << endl;
+}

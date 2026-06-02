@@ -82,12 +82,21 @@ int main(int argc, char *argv[])
 
     Info<< "\nStarting iteration loop\n" << nl;
 
+    // depending on the environment
     scalar factorMulti = 8.0;
     int pwr = -9;
     scalar factor = factorMulti * pow(10.0, pwr);
-    scalar ecoUpperThresh = 0.2;
-    scalar ecoLowerThresh = 0.08;
+
+    // maxEeCo above 0.2: the simulation is likely to terminate early
+    scalar ecoHyperThresh = 0.2;
+    // maxEeCo above 0.1: reducing factor seems to reduce maxEeCo 0.1 -> 0.05
+    scalar ecoUpperThresh = 0.1;
+    // ecoLowerThresh lower than the expected normal reduction caused by factor changes
+    scalar ecoLowerThresh = 0.04;
     scalar maxEeCo = (ecoUpperThresh + ecoLowerThresh) / 2;
+    scalar maxEeCo_old = maxEeCo;
+    // eeCoRateLimit is likely to be exceeded in the cycle after the factor is increased
+    scalar eeCoRateLimit = 0.5;
 
     scalar dtUpperLimit = 1e-6;
 
@@ -100,13 +109,29 @@ int main(int argc, char *argv[])
     int nInitialIterations = 50;
     while (runTime.loop())
     {
+        int logsPerIter = 1000;
+        int enableDetailedLogs = !(runTime.timeIndex() % logsPerIter);
+        if (runTime.timeIndex() < 10) enableDetailedLogs = 1;
         if (nInitialIterations)
         {
             // Balance the charge at the start of the run: nN2p - ne = 0
-            Info << "internal before clamp min/max ne: " << min(ne.internalField()).value() << " " << max(ne.internalField()).value() << endl;
+            if (enableDetailedLogs)
+            {
+                scalar minNe = gMin(ne);
+                scalar maxNe = gMax(ne);
+                if (Pstream::master()) Info << "before clamp min/max ne: " << minNe << " " << maxNe << endl;
+            }
+
             ne = max(ne, dimensionedScalar("minNe", ne.dimensions(), 9.8e-3));
             ne.correctBoundaryConditions();
-            Info << "internal before clamp min/max nN2p: " << min(nN2p.internalField()).value() << " " << max(nN2p.internalField()).value() << endl;
+            
+            if (enableDetailedLogs)
+            {
+                scalar minN2 = gMin(nN2p);
+                scalar maxN2 = gMax(nN2p);
+                if (Pstream::master()) Info << "before clamp min/max nN2p: " << minN2 << " " << maxN2 << endl;
+            }
+
             nN2p = max(nN2p, dimensionedScalar("minN2p", nN2p.dimensions(), 1.0e-2));
             nN2p.correctBoundaryConditions();
 
@@ -115,8 +140,13 @@ int main(int argc, char *argv[])
 
         if (nInitialIterations)
         {
-            Info << "Initialising phiE solving the Laplace equation at time 0: phiE extent = "
-                 << mag(gMax(phiE) - gMin(phiE)) << endl;
+            if (enableDetailedLogs)
+            {
+                scalar minPhiE = gMax(phiE);
+                scalar maxPhiE = gMin(phiE);
+                if (Pstream::master()) Info << "Initialising phiE solving the Laplace equation at time 0: phiE extent = "
+                                            << mag(maxPhiE - minPhiE) << endl;
+            }
 
             for (int i = 0; i < nNonOrthogonalPotCorrectors && nInitialIterations; i++)
             {
@@ -136,30 +166,44 @@ int main(int argc, char *argv[])
             E = -fvc::grad(phiE);
             E.correctBoundaryConditions();
 
-            Info << "phiE initialised: min/max = "
-                 << min(phiE).value() << " / "
-                 << max(phiE).value() << endl;
+            if (enableDetailedLogs)
+            {
+                scalar minPhiE = gMin(phiE);
+                scalar maxPhiE = gMax(phiE);
+                if (Pstream::master()) Info << "phiE initialised: min/max = " << minPhiE << " / " << maxPhiE << endl;
+            }
         }
 
-        #include "CourantNo.H"
-        // #include "setDeltaT.H" : instead opt for a dynamic DeltaT based on the reaction rate
         if (1) {
             #include "calcReactionRate.H"
-            scalar Vmax = gMax(mesh.V().primitiveField());
-            Info << "Vmax: " << Vmax << endl;
+            scalar Vmax = gMax(mesh.V());
+            if (Pstream::master() && enableDetailedLogs) Info << "Vmax: " << Vmax << endl;
             scalar meshDeltaX = min(Foam::exp(Foam::log(Vmax)/3.0), GREAT);
-            Info << "meshDeltaX: " << meshDeltaX << endl;
+            if (Pstream::master() && enableDetailedLogs) Info << "meshDeltaX: " << meshDeltaX << endl;
             volScalarField magUe
             (
                 "magUe",
                 mag(mu_e * E)
             );
-            scalar maxDriftVelocity = max(magUe).value();
-            Info << "maxDriftVelocity: " << maxDriftVelocity << endl;
+            scalar maxDriftVelocity = gMax(magUe);
+            if (Pstream::master() && enableDetailedLogs) Info << "maxDriftVelocity: " << maxDriftVelocity << endl;
             scalar dt1 = meshDeltaX / (50 * (maxDriftVelocity + SMALL));
-            Info << "dt1: " << dt1 << endl;
+            if (Pstream::master() && enableDetailedLogs) Info << "dt1: " << dt1 << endl;
 
-            if (ecoUpperThresh < maxEeCo)
+            scalar eeCoRate = (maxEeCo - maxEeCo_old) / maxEeCo_old;
+            if (ecoLowerThresh < maxEeCo_old && eeCoRateLimit < eeCoRate)
+            {
+                pwr -= 2;
+                factor = factorMulti * pow(10.0, pwr);
+                enableDetailedLogs = 1;
+            }
+            else if (ecoHyperThresh < maxEeCo)
+            {
+                pwr -= 1;
+                factor = factorMulti * pow(10.0, pwr);
+                enableDetailedLogs = 1;
+            }
+            else if (ecoUpperThresh < maxEeCo)
             {
                 factorMulti -= 1.0;
                 if (factorMulti < 1.0)
@@ -169,6 +213,7 @@ int main(int argc, char *argv[])
                 }
 
                 factor = factorMulti * pow(10.0, pwr);
+                enableDetailedLogs = 1;
             }
             else if (maxEeCo < ecoLowerThresh)
             {
@@ -180,21 +225,30 @@ int main(int argc, char *argv[])
                 }
 
                 factor = factorMulti * pow(10.0, pwr);
+                enableDetailedLogs = 1;
             }
 
-            Info << "maxEeCo " << maxEeCo << " factorMulti: " << factorMulti << " pwr: " << pwr << endl;
+            maxEeCo_old = maxEeCo;
+            if (Pstream::master() && enableDetailedLogs) Info << "maxEeCo " << maxEeCo << " eeCoRate: " << eeCoRate << " factorMulti: " << factorMulti << " pwr: " << pwr << endl;
 
             maxReactionRate = max(maxReactionRate, SMALL);
             scalar dt2 = factor / maxReactionRate;
-            Info << "dt2: " << dt2 << endl;
+            if (Pstream::master() && enableDetailedLogs) Info << "dt2: " << dt2 << endl;
             scalar deltaT = min(dt1, dt2);
             deltaT = min(deltaT, dtUpperLimit);
-            Info << "computed new deltaT: " << deltaT << endl;
+            if (Pstream::master() && enableDetailedLogs) Info << "computed new deltaT: " << deltaT << endl;
 
             runTime.setDeltaT(deltaT);
         }
 
-        Info<< "Iteration = " << runTime.name() << nl << endl;
+        if (0)
+        {
+            // Note to use this header re-write for parallel operation
+            #include "CourantNo.H"
+            // #include "setDeltaT.H" : instead opt for a dynamic DeltaT based on the reaction rate
+        }
+
+        if (Pstream::master() && enableDetailedLogs) Info<< "Iteration = " << runTime.name() << " index: " << runTime.timeIndex() << nl << endl;
         while (pimple.loop())
         {
             for (int corr=0; corr<nPhiECorrectors; corr++)
@@ -225,7 +279,7 @@ int main(int argc, char *argv[])
                 }
 
                 E.correctBoundaryConditions();
-                if (1)
+                if (enableDetailedLogs)
                 {
                     label nePatchID = mesh.boundaryMesh().findIndex("NELEMENT");
                     if (nePatchID < 0)
@@ -239,7 +293,9 @@ int main(int argc, char *argv[])
                     const tmp<vectorField> tnHat = mesh.boundary()[nePatchID].nf();
                     const vectorField& nHat = tnHat();
                     scalarField nEn = nEpatch & nHat;
-                    Info << "min/max En at NELEMENT boundary: " << gMin(nEn) << " " << gMax(nEn) << endl;
+                    scalar minNEn = gMin(nEn);
+                    scalar maxNEn = gMax(nEn);
+                    if (Pstream::master()) Info << "min/max En at NELEMENT boundary: " << minNEn << " " << maxNEn << endl;
 
                     label pePatchID = mesh.boundaryMesh().findIndex("PELEMENT");
                     if (pePatchID < 0)
@@ -253,7 +309,9 @@ int main(int argc, char *argv[])
                     const tmp<vectorField> tpHat = mesh.boundary()[pePatchID].nf();
                     const vectorField& pHat = tpHat();
                     scalarField pEn = pEpatch & pHat;
-                    Info << "min/max En at PELEMENT boundary: " << gMin(pEn) << " " << gMax(pEn) << endl;
+                    scalar minPEn = gMin(pEn);
+                    scalar maxPEn = gMax(pEn);
+                    if (Pstream::master()) Info << "min/max En at PELEMENT boundary: " << minPEn << " " << maxPEn << endl;
                 }
 
 
@@ -278,6 +336,8 @@ int main(int argc, char *argv[])
                         maxEeCo = max(maxEeCo, max(coOwn, coNei));
                     }
 
+                    maxEeCo = returnReduce(maxEeCo, maxOp<scalar>());
+
                     forAll(phiEFlux_N2p, faceI)
                     {
                         scalar flux = mag(phiEFlux_N2p[faceI]);
@@ -291,25 +351,45 @@ int main(int argc, char *argv[])
                         maxEpCo = max(maxEpCo, max(coOwn, coNei));
                     }
 
+                    maxEpCo = returnReduce(maxEpCo, maxOp<scalar>());
+
                     scalar totalFlux =
                         gSum(mag(phiEFlux_e)())
                         + gSum(mag(phiEFlux_N2p)());
 
                     scalar meanECo = (totalFlux * dt) / gSum(mesh.V());
 
-                    Info << "E min/max: " << min(mag(E)).value()
-                         << " / " << max(mag(E)).value() << endl;
+                    if (enableDetailedLogs)
+                    {
+                        volScalarField magE
+                        (
+                             "magE",
+                             mag(E)
+                        );
 
-                    Info << "Ue min/max: " << min(mag(Ue)).value()
-                         << " / " << max(mag(Ue)).value() << endl;
+                        scalar minMagE = gMin(magE);
+                        scalar maxMagE = gMax(magE);
+                        if (Pstream::master()) Info << "E min/max: " << minMagE << " / " << maxMagE << endl;
 
-                    Info << "phiEFlux_e min/max: "
-                         << min(phiEFlux_e).value()
-                         << " / " << max(phiEFlux_e).value() << endl;
+                        volScalarField magUe
+                        (
+                             "magUe",
+                             mag(Ue)
+                        );
 
-                    Info << "Mean drift Courant Number = " << meanECo << endl;
-                    Info << "Max drift Courant Numbers: electron: " << maxEeCo
-                         << " positive ion: " << maxEpCo << endl;
+                        scalar minMagUe = gMin(magUe);
+                        scalar maxMagUe = gMax(magUe);
+                        if (Pstream::master()) Info << "Ue min/max: " << minMagUe << " / " << maxMagUe << endl;
+
+                        scalar minPhiEFlux_e = gMin(phiEFlux_e);
+                        scalar maxPhiEFlux_e = gMax(phiEFlux_e);
+                        if (Pstream::master()) Info << "phiEFlux_e min/max: "
+                                                    << minPhiEFlux_e << " / " << maxPhiEFlux_e << endl;
+
+                        if (Pstream::master()) Info << "Mean drift Courant Number = " << meanECo << endl;
+                        if (Pstream::master()) Info << "Max drift Courant Numbers: electron: " << maxEeCo
+                                                    << " positive ion: " << maxEpCo << endl;
+                    }
                 }
             }
 
@@ -349,8 +429,13 @@ int main(int argc, char *argv[])
                 // update the momentum with the updated U
                 momentumTransport->correct();
 
-                #include "continuityErrs.H"
-                Info << "Pressure corrector: max(U) = " << max(mag(U)) << endl;
+                if (enableDetailedLogs)
+                {
+                    #include "continuityErrs.H"
+                    volScalarField magU = mag(U);
+                    scalar maxMagU = gMax(magU);
+                    if (Pstream::master()) Info << "Pressure corrector: max(U) = " << maxMagU << endl;
+                }
             }
 
             // recompute phi with updated U
@@ -382,7 +467,7 @@ int main(int argc, char *argv[])
 
         runTime.write();
 
-        Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
+        if (Pstream::master() && enableDetailedLogs) Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
             << "  ClockTime = " << runTime.elapsedClockTime() << " s"
             << nl << endl;
     }

@@ -49,4 +49,23 @@ runTimeModifiable true;
 
 // maxCo           1;
 
+InfoSwitches
+{
+    // Set to 1 to increase detail of printed solver/run metrics
+    printCoeffs          0;
+}
+
+// Defaults: dimensionSet 1; fileName 2; GAMGAgglomeration 1; level 2; lduMatrix 1; SolverPerformance 1; vtkUnstructuredReader 1;
+//   SolverPerformance   0; :- switch off "smoothSolver:  Solving for" and "DICPCG:  Solving for"
+DebugSwitches
+{
+    dimensionSet        1;
+    fileName            2;
+    GAMGAgglomeration   1;
+    level               1;
+    lduMatrix           1;
+    SolverPerformance   0;
+    vtkUnstructuredReader 1;
+}
+
 // ************************************************************************* //

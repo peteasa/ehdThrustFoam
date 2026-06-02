@@ -50,7 +50,7 @@ SolverPerformance<scalar> nePerf = neEqn.solve();
 ne.correctBoundaryConditions();
 
 // Print electron density residual
-Info << "Residual ne = " << nePerf.finalResidual() << endl;
+if (Pstream::master() && enableDetailedLogs) Info << "Residual ne = " << nePerf.finalResidual() << endl;
 
 nN2pEqn.relax();
 SolverPerformance<scalar> nN2pPerf = nN2pEqn.solve();
@@ -59,15 +59,19 @@ SolverPerformance<scalar> nN2pPerf = nN2pEqn.solve();
 nN2p.correctBoundaryConditions();
 
 // Print ion density residual
-Info << "Residual nN2p = " << nN2pPerf.finalResidual() << endl;
+if (Pstream::master() && enableDetailedLogs) Info << "Residual nN2p = " << nN2pPerf.finalResidual() << endl;
 
-if (1)
+if (enableDetailedLogs)
 {
-    Info << "internal min/max ne: " << min(ne.internalField()).value() << " " << max(ne.internalField()).value() << endl;
-    Info << "internal min/max nN2p: " << min(nN2p.internalField()).value() << " " << max(nN2p.internalField()).value() << endl;
+    scalar minNe = gMin(ne);
+    scalar maxNe = gMax(ne);
+    if (Pstream::master()) Info << "min/max ne: " << minNe << " " << maxNe << endl;
+    scalar minN2 = gMin(nN2p);
+    scalar maxN2 = gMax(nN2p);
+    if (Pstream::master()) Info << "min/max nN2p: " << minN2 << " " << maxN2 << endl;
 }
 
-if (1)
+if (enableDetailedLogs)
 {
     label nePatchID = mesh.boundaryMesh().findIndex("NELEMENT");
     if (nePatchID < 0)
@@ -78,7 +82,9 @@ if (1)
     }
 
     const fvPatchScalarField& nepatch = ne.boundaryField()[nePatchID];
-    Info << "min/max ne at NELEMENT boundary: " << gMin(nepatch) << " " << gMax(nepatch) << endl;
+    scalar minNeP = gMin(nepatch);
+    scalar maxNeP = gMax(nepatch);
+    if (Pstream::master()) Info << "min/max ne at NELEMENT boundary: " << minNeP << " " << maxNeP << endl;
 
     label pePatchID = mesh.boundaryMesh().findIndex("PELEMENT");
     if (pePatchID < 0)
@@ -89,12 +95,19 @@ if (1)
     }
 
     const fvPatchScalarField& pepatch = ne.boundaryField()[pePatchID];
-    Info << "min/max ne at PELEMENT boundary: " << gMin(pepatch) << " " << gMax(pepatch) << endl;
+    scalar minPeP = gMin(pepatch);
+    scalar maxPeP = gMax(pepatch);
+    if (Pstream::master()) Info << "min/max ne at PELEMENT boundary: " << minPeP << " " << maxPeP << endl;
 }
 
 // balancing of charge causes big error in ne
 volScalarField chargeError = nN2p - ne;
-Info << " chargeError min/max: " << min(chargeError.internalField()).value() << " " << max(chargeError.internalField()).value() << endl;
+if (enableDetailedLogs)
+{
+    scalar minChErr = gMin(chargeError);
+    scalar maxChErr = gMax(chargeError);
+    if (Pstream::master()) Info << " chargeError min/max: " << minChErr << " " << maxChErr << endl;
+}
 
 if (0)
 {
@@ -113,5 +126,10 @@ if (0) {
                dimensionedScalar("rhoMax", rhoE.dimensions(), 1e-6));
 }
 
-Info << "min/max rhoE: " << min(rhoE).value() << " " << max(rhoE).value() << endl;
+if (enableDetailedLogs)
+{
+    scalar minRhoE = gMin(rhoE);
+    scalar maxRhoE = gMax(rhoE);
+    if (Pstream::master()) Info << "min/max rhoE: " << minRhoE << " " << maxRhoE << endl;
+}
 
