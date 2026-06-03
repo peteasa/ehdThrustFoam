@@ -1,11 +1,15 @@
 #!/bin/sh
 cd ${0%/*} || exit 1    # Run from this directory
 
+# create multiple processor folders
+decomposePar > log.decomposePar 2>&1
+
 # Source tutorial run functions
 . $WM_PROJECT_DIR/bin/tools/RunFunctions
 
 application=$(getApplication)
 
-runApplication $application
+#runApplication $application
+runParallel $application
 
 #------------------------------------------------------------------------------

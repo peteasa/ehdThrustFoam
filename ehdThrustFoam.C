@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
 
             ne = max(ne, dimensionedScalar("minNe", ne.dimensions(), 9.8e-3));
             ne.correctBoundaryConditions();
-            
+
             if (enableDetailedLogs)
             {
                 scalar minN2 = gMin(nN2p);
@@ -228,8 +228,8 @@ int main(int argc, char *argv[])
                 enableDetailedLogs = 1;
             }
 
+            if (Pstream::master() && enableDetailedLogs) Info << "maxEeCo: " << maxEeCo << " eeCoRate: " << eeCoRate << " factorMulti: " << factorMulti << " pwr: " << pwr << " previous maxEeCo: " << maxEeCo_old << endl;
             maxEeCo_old = maxEeCo;
-            if (Pstream::master() && enableDetailedLogs) Info << "maxEeCo " << maxEeCo << " eeCoRate: " << eeCoRate << " factorMulti: " << factorMulti << " pwr: " << pwr << endl;
 
             maxReactionRate = max(maxReactionRate, SMALL);
             scalar dt2 = factor / maxReactionRate;

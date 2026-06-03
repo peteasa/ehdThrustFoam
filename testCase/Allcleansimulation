@@ -3,7 +3,10 @@ cd ${0%/*} || exit 1    # Run from this directory
 
 rm -rf 0
 rm -rf *[1-9]*
+rm -rf processor*
+
 # rm -f log.*
+rm -f log.decomposePar
 rm -f log.foamRun
 rm -f log.ehdThrustFoam
 
