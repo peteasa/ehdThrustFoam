@@ -27,7 +27,7 @@ set linetype  8 lc rgb "black"   lw 2
 set linetype  9 lc rgb "gray50"  lw 2
 set linetype cycle  9
 
-set xrange [0:0.0001]
+set xrange [0:0.001]
 
 set ylabel "U" offset 0.1
 set ytics nomirror

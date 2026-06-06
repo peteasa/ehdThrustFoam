@@ -1,19 +1,15 @@
 
-/*dimensionedScalar lambda
+volScalarField phiEOld
 (
-    "lambda",
-    dimless / sqr(dimLength),
-    1e-10
+    "phiEOld",
+    phiE
 );
-*/
 
 fvScalarMatrix phiEqn
 (
     fvm::laplacian(phiE)
-  // - fvm::Sp(lambda, phiE)  // has no effect! introduced to reduce the growth of phiE
     ==
   - rhoE / epsilon0
-    //- rhoEff / epsilon0 introduced to reduce growth of E and phiE but has no effect!
 );
 
 // Solve Poisson
@@ -21,11 +17,37 @@ phiEqn.relax();
 SolverPerformance<scalar> phiEPerf = phiEqn.solve();
 
 // Print Poisson residual
-if (Pstream::master() && enableDetailedLogs) Info << "Residual phiE = " << phiEPerf.finalResidual() << endl;
+if (Pstream::master() && enableDetailedLogs) Info << "Residual phiE = " << phiEPerf.finalResidual() << nl;
 
 if (enableDetailedLogs)
 {
     scalar minPhiE = gMin(phiE);
     scalar maxPhiE = gMax(phiE);
-    if (Pstream::master()) Info << "min/max phiE: " << minPhiE << " " << maxPhiE << " phiE range = " << mag(maxPhiE - minPhiE) << endl;
+    scalar avPhiE = gAverage(phiE);
+    if (Pstream::master()) Info << "min/max phiE: " << minPhiE << " " << maxPhiE << " average phiE: " << avPhiE << " phiE range = " << mag(maxPhiE - minPhiE) << nl;
+
+    volScalarField magChange
+    (
+        "magChange",
+        mag(phiE - phiEOld)
+    );
+    scalar phiEChange = gMax(magChange);
+    if (Pstream::master()) Info << "max change in phiE: " << phiEChange << nl;
+}
+
+if (enableDetailedLogs)
+{
+    // display the the reference value
+    label ppPatchID = mesh.boundaryMesh().findIndex("PELEMENT");
+    if (ppPatchID < 0)
+    {
+        FatalErrorInFunction
+            << "Patch PELEMENT not found"
+            << exit(FatalError);
+    }
+
+    const fvPatchScalarField& pphiEpatch = phiE.boundaryField()[ppPatchID];
+    scalar minPPhiE = gMin(pphiEpatch);
+    scalar maxPPhiE = gMax(pphiEpatch);
+    if (Pstream::master()) Info << "precorrection min/max phiE at PELEMENT boundary: " << minPPhiE << " " << maxPPhiE << nl;
 }

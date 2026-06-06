@@ -26,7 +26,7 @@ eCharge         eCharge  [ 0 0 1 0 0 1 0 ]    1.602e-19;
 
 // mobility - dimArea / dimVoltage / dimTime
 mu_e            mu_e     [ -1 0 2 0 0 1 0 ] 5e-3;   // 5e-3(:->D 0.01)
-mu_N2p          mu_N2p   [ -1 0 2 0 0 1 0 ] 1e-4;   // 5e-5(:->D 0.0001) -> 1.6e-4(:->D ?)
+mu_N2p          mu_N2p   [ -1 0 2 0 0 1 0 ] 1.6e-4;   // 5e-5(:->D 0.0001) -> 1.6e-4(:->D ?)
 
 // ionisation - for Townsend ionisation
 // dimless / dimLength
@@ -35,7 +35,7 @@ A               A        [ 0 -1 0 0 0 0 0 ] 1e5;    // ~ air 1e5
 B               B        [ 1 1 -3 0 0 -1 0 ] 6e6;   // ~ air 3e7
 
 // emission coefficient (for boundary condition)
-gamma           gamma    [ 0 0 0 0 0 0 0 ] 0.05;    // 0.01 – 0.2 air discharges
+gamma           gamma    [ 0 0 0 0 0 0 0 ] 0.1;    // 0.01 – 0.2 air discharges
 
 // for Diffusion coefficients - dimTemperature
 Te              Te       [ 1 2 -3 0 0 -1 0 ] 2.0;   // 2 eV

@@ -56,6 +56,9 @@ if (enableDetailedLogs)
     scalar minAlphaRaw = gMin(alphaRaw);
     scalar maxAlphaRaw = gMax(alphaRaw);
     if (Pstream::master()) Info << "min/max alphaRaw: " << minAlphaRaw << " " << maxAlphaRaw << endl;
+
+    label maxCell = findMax(alphaRaw);
+    if (Pstream::master()) Info<< "cell with max alphaRaw = " << maxCell << endl;
 }
 
 volScalarField ionSwitch  // ionSwitch may not be needed

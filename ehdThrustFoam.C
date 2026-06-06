@@ -84,15 +84,15 @@ int main(int argc, char *argv[])
 
     // depending on the environment
     scalar factorMulti = 8.0;
-    int pwr = -9;
+    int pwr = -10;
     scalar factor = factorMulti * pow(10.0, pwr);
 
-    // maxEeCo above 0.2: the simulation is likely to terminate early
-    scalar ecoHyperThresh = 0.2;
-    // maxEeCo above 0.1: reducing factor seems to reduce maxEeCo 0.1 -> 0.05
-    scalar ecoUpperThresh = 0.1;
+    // maxEeCo above 0.3: the simulation is likely to terminate early
+    scalar ecoHyperThresh = 0.3;
+    // maxEeCo above 0.2: reducing factor seems to reduce maxEeCo 0.2 -> 0.1
+    scalar ecoUpperThresh = 0.2;
     // ecoLowerThresh lower than the expected normal reduction caused by factor changes
-    scalar ecoLowerThresh = 0.04;
+    scalar ecoLowerThresh = 0.08;
     scalar maxEeCo = (ecoUpperThresh + ecoLowerThresh) / 2;
     scalar maxEeCo_old = maxEeCo;
     // eeCoRateLimit is likely to be exceeded in the cycle after the factor is increased
@@ -107,11 +107,35 @@ int main(int argc, char *argv[])
     Info<< "runTime.loop() first check = " << runTime.loop() << nl;
 
     int nInitialIterations = 50;
+    scalar PPhiE_old = 0;
     while (runTime.loop())
     {
-        int logsPerIter = 1000;
-        int enableDetailedLogs = !(runTime.timeIndex() % logsPerIter);
+        int iterPerLogs = 1000;
+        int enableDetailedLogs = !(runTime.timeIndex() % iterPerLogs);
         if (runTime.timeIndex() < 10) enableDetailedLogs = 1;
+
+        if (1)
+        {
+            label ppPatchID = mesh.boundaryMesh().findIndex("PELEMENT");
+            if (ppPatchID < 0)
+            {
+                FatalErrorInFunction
+                    << "Patch PELEMENT not found"
+                    << exit(FatalError);
+            }
+
+            const fvPatchScalarField& pphiEpatch = phiE.boundaryField()[ppPatchID];
+            scalar PPhiE = gMax(pphiEpatch);
+            if (!nInitialIterations && (1e-10 < mag(PPhiE - PPhiE_old)))
+            {
+                if (Pstream::master()) Info << "PPhiE: " << PPhiE << " PPhiE - PPhiE_old: " << PPhiE - PPhiE_old << nl;
+                nInitialIterations = 50;
+                enableDetailedLogs = 1;
+            }
+
+            PPhiE_old = PPhiE;
+        }
+
         if (nInitialIterations)
         {
             // Balance the charge at the start of the run: nN2p - ne = 0
@@ -144,8 +168,8 @@ int main(int argc, char *argv[])
             {
                 scalar minPhiE = gMax(phiE);
                 scalar maxPhiE = gMin(phiE);
-                if (Pstream::master()) Info << "Initialising phiE solving the Laplace equation at time 0: phiE extent = "
-                                            << mag(maxPhiE - minPhiE) << endl;
+                if (Pstream::master()) Info << "Initialising phiE solving the Laplace equation at time " << runTime.name()
+                                            << ": phiE extent = " << mag(maxPhiE - minPhiE) << endl;
             }
 
             for (int i = 0; i < nNonOrthogonalPotCorrectors && nInitialIterations; i++)
@@ -241,10 +265,9 @@ int main(int argc, char *argv[])
             runTime.setDeltaT(deltaT);
         }
 
-        if (0)
+        if (enableDetailedLogs)
         {
-            // Note to use this header re-write for parallel operation
-            #include "CourantNo.H"
+            #include "mpCourantNo.H"
             // #include "setDeltaT.H" : instead opt for a dynamic DeltaT based on the reaction rate
         }
 
@@ -314,8 +337,25 @@ int main(int argc, char *argv[])
                     if (Pstream::master()) Info << "min/max En at PELEMENT boundary: " << minPEn << " " << maxPEn << endl;
                 }
 
+                if (enableDetailedLogs)
+                {
+                    volScalarField magE
+                    (
+                        "magE",
+                        mag(E)
+                    );
+
+                    scalar minMagE = gMin(magE);
+                    scalar maxMagE = gMax(magE);
+                    if (Pstream::master()) Info << "min/max magE: " << minMagE << " " << maxMagE << endl;
+
+                    scalar minPhiE = gMin(phiE);
+                    scalar maxPhiE = gMax(phiE);
+                    if (Pstream::master()) Info << "phiE min/max = " << minPhiE << " / " << maxPhiE << endl;
+                }
 
                 {
+                    // now calculate the Courant Numbers for e and ions
                     surfaceScalarField phiEFlux_e = fvc::flux(-mu_e * E);
                     surfaceScalarField phiEFlux_N2p = fvc::flux(mu_N2p * E);
 
@@ -361,16 +401,6 @@ int main(int argc, char *argv[])
 
                     if (enableDetailedLogs)
                     {
-                        volScalarField magE
-                        (
-                             "magE",
-                             mag(E)
-                        );
-
-                        scalar minMagE = gMin(magE);
-                        scalar maxMagE = gMax(magE);
-                        if (Pstream::master()) Info << "E min/max: " << minMagE << " / " << maxMagE << endl;
-
                         volScalarField magUe
                         (
                              "magUe",
