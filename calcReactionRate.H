@@ -10,6 +10,9 @@ if (enableDetailedLogs)
     scalar minE = gMin(magE);
     scalar maxE = gMax(magE);
     if (Pstream::master()) Info << "min/max magE: " << minE << " " << maxE << endl;
+
+    label maxCell = findMax(magE);
+    if (Pstream::master()) Info<< "cell with max magE = " << maxCell << endl;
 }
 
 // ionisation N2 -> N2+ + e-
@@ -101,6 +104,9 @@ if (enableDetailedLogs)
     scalar minRei = gMin(Rei.internalField());
     scalar maxRei = gMax(Rei.internalField());
     if (Pstream::master()) Info << "internal min/max Rei: " << minRei << " " << maxRei << endl;
+
+    label maxCell = findMax(Rei);
+    if (Pstream::master()) Info<< "cell with max Rei = " << maxCell << endl;
 }
 
 volScalarField reactionRate
@@ -116,5 +122,5 @@ volScalarField magRR
      mag(reactionRate)
 );
 
-scalar maxReactionRate = gMax(magRR);
+maxReactionRate = gMax(magRR);
 if (Pstream::master() && enableDetailedLogs) Info << "maxReactionRate: " << maxReactionRate << endl;

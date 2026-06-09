@@ -69,3 +69,4 @@ dimensionedScalar kei
     physicalProperties.lookup("kei")
 );
 
+scalar maxReactionRate = 0;

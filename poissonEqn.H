@@ -17,7 +17,10 @@ phiEqn.relax();
 SolverPerformance<scalar> phiEPerf = phiEqn.solve();
 
 // Print Poisson residual
-if (Pstream::master() && enableDetailedLogs) Info << "Residual phiE = " << phiEPerf.finalResidual() << nl;
+if (Pstream::master() && enableDetailedLogs) Info << "Residual phiE = " << phiEPerf.finalResidual() << " nIterations: " << phiEPerf.nIterations() << nl;
+
+// update the reference values
+phiE.correctBoundaryConditions();
 
 if (enableDetailedLogs)
 {

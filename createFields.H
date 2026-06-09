@@ -82,7 +82,7 @@ surfaceScalarField phi
 );
 
 const dictionary& potentialDict = fvSolutionDict.subDict("potentialFlow");
-int nNonOrthogonalPotCorrectors      = potentialDict.lookupOrDefault<int>("nNonOrthogonalCorrectors", 50);
+int nNonOrthogonalPotCorrectors = potentialDict.lookupOrDefault<int>("nNonOrthogonalCorrectors", 50);
 
 Info << "potential init settings:" << endl
      << "  nNonOrthogonalPotCorrectors      = " << nNonOrthogonalPotCorrectors << endl;
