@@ -48,8 +48,8 @@ divSchemes
 
     div((nuEff*dev2(T(grad(U))))) Gauss linear;
 
-    div(phid_e,ne)     bounded Gauss upwind;
-    div(phid_N2p,nN2p) bounded Gauss upwind;
+    div(phi_e,ne)     bounded Gauss upwind;
+    div(phi_N2p,nN2p) bounded Gauss upwind;
     div(phiEFlux_e,ne)     bounded Gauss upwind;
     div(phiEFlux_N2p,nN2p) bounded Gauss upwind;
 

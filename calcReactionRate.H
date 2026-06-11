@@ -17,70 +17,19 @@ if (enableDetailedLogs)
 
 // ionisation N2 -> N2+ + e-
 // calculate source ion term (Sion) using the Townsend coefficient alpha
-// alpha = A * exp(-B / magE);
-// volScalarField Sion = alpha * mu_e * magE * ne;
-
-dimensionedScalar smallE("smallE", magE.dimensions(), 1e3);
-dimensionedScalar Ecrit("Ecrit", magE.dimensions(), 2.5e7);
-dimensionedScalar Smax("Smax", dimless/dimVolume/dimTime, 1e20);
-dimensionedScalar neMax("neMax", ne.dimensions(), 1e5); // reducing to 1e16 makes no difference!
-dimensionedScalar ionScale("ionScale", dimless, 1e-4);
-
-// bounded electric field response has a big effect on ne nN2p nO2m but has no effect on phiE and E
-volVectorField Eeff
+volScalarField alpha
 (
-    "Eeff",
-    E / (1.0 + magE/Ecrit)
+    "alpha",
+    A * exp(-B / magE)
 );
 
-volScalarField magEeff
-(
-    "magEeff",
-    mag(Eeff)
-);
+dimensionedScalar ionScale("ionScale", dimless, 1e-1);
 
-if (enableDetailedLogs)
-{
-    scalar minEeff = gMin(magEeff);
-    scalar maxEeff = gMax(magEeff);
-    if (Pstream::master()) Info << "min/max magEeff: " << minEeff << " " << maxEeff << endl;
-}
-
-// Townsend coefficient
-volScalarField alphaRaw
-(
-    "alphaRaw",
-    A * Foam::exp(-B / max(magEeff, smallE))
-);
-
-alphaRaw = min(alphaRaw, dimensionedScalar("alphaMax", alphaRaw.dimensions(), 1e5));
-if (enableDetailedLogs)
-{
-    scalar minAlphaRaw = gMin(alphaRaw);
-    scalar maxAlphaRaw = gMax(alphaRaw);
-    if (Pstream::master()) Info << "min/max alphaRaw: " << minAlphaRaw << " " << maxAlphaRaw << endl;
-
-    label maxCell = findMax(alphaRaw);
-    if (Pstream::master()) Info<< "cell with max alphaRaw = " << maxCell << endl;
-}
-
-volScalarField ionSwitch  // ionSwitch may not be needed
-(
-    "ionSwitch",
-    magE / (magE + Ecrit)
-);
-
-// base ionization source
-volScalarField SionRaw
-(
-    "SionRaw",
-    ionScale * alphaRaw * mu_e * magEeff * ne // magEeff may not be needed
-);
-
+// Sion is stable when scaled
 volScalarField Sion
 (
     "Sion",
-    min(SionRaw * ionSwitch, Smax)
+    ionScale * alpha * mu_e * magE * ne
 );
 
 if (enableDetailedLogs)

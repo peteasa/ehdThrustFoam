@@ -9,18 +9,18 @@ volVectorField Ue
 //surfaceScalarField phiEFlux_e = fvc::flux(Ue);
 //surfaceScalarField phiEFlux_N2p = fvc::flux(mu_N2p * E);
 
-surfaceScalarField phid_e
+surfaceScalarField phi_e
 (
-    "phid_e",
-    ( fvc::interpolate(-mu_e * Eeff) & mesh.Sf() )
+    "phi_e",
+    ( fvc::interpolate(-mu_e * E) & mesh.Sf() )
 );
 
-//Info << "phid_e dimensions: " << phi_e.dimensions() << endl;
+//Info << "phi_e dimensions: " << phi_e.dimensions() << endl;
 
-surfaceScalarField phid_N2p
+surfaceScalarField phi_N2p
 (
-    "phid_N2p",
-    ( fvc::interpolate(mu_N2p * Eeff) & mesh.Sf() )
+    "phi_N2p",
+    ( fvc::interpolate(mu_N2p * E) & mesh.Sf() )
 );
 
 //Info << "De dimensions: " << De.dimensions() << endl;
@@ -28,7 +28,7 @@ surfaceScalarField phid_N2p
 fvScalarMatrix neEqn
 (
       fvm::ddt(ne)
-    + fvm::div(phid_e, ne)
+    + fvm::div(phi_e, ne)
     - fvm::laplacian(De, ne)
  ==
     Sion
@@ -38,7 +38,7 @@ fvScalarMatrix neEqn
 fvScalarMatrix nN2pEqn
 (
       fvm::ddt(nN2p)
-    + fvm::div(phid_N2p, nN2p)
+    + fvm::div(phi_N2p, nN2p)
     - fvm::laplacian(DN2p, nN2p)
  ==
       Sion
@@ -69,10 +69,10 @@ if (enableDetailedLogs)
 {
     scalar minNe = gMin(ne);
     scalar maxNe = gMax(ne);
-    if (Pstream::master()) Info << "min/max ne: " << minNe << " " << maxNe << nl;
+    if (0 < maxNe && Pstream::master()) Info << "min/max ne: " << minNe << " " << maxNe << " min/max: " << minNe / maxNe << nl;
     scalar minN2 = gMin(nN2p);
     scalar maxN2 = gMax(nN2p);
-    if (Pstream::master()) Info << "min/max nN2p: " << minN2 << " " << maxN2 << nl;
+    if (0 < maxN2 && Pstream::master()) Info << "min/max nN2p: " << minN2 << " " << maxN2 << " min/max: " << minN2 / maxN2 << nl;
 }
 
 if (enableDetailedLogs)
@@ -113,12 +113,6 @@ if (enableDetailedLogs)
     if (Pstream::master()) Info << " chargeError min/max: " << minChErr << " " << maxChErr << nl;
 }
 
-if (0)
-{
-    ne += 0.1 * chargeError;
-    Info << "balanced charge ne min/max: " << min(ne.internalField()).value() << " " << max(ne.internalField()).value() << nl;
-}
-
 volScalarField rhoEOld
 (
     "rhoEOld",
@@ -127,14 +121,6 @@ volScalarField rhoEOld
 
 // rhoE = eCharge * (- ne);
 rhoE = eCharge * (nN2p - ne);
-
-// TODO Find a way to remove this clamp
-if (0) {
-    Info << "DEBUG: clamp rhoE" << endl;
-    rhoE = min(max(rhoE,
-                   dimensionedScalar("rhoMin", rhoE.dimensions(), -1e-6)),
-               dimensionedScalar("rhoMax", rhoE.dimensions(), 1e-6));
-}
 
 if (enableDetailedLogs)
 {
