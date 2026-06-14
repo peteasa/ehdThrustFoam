@@ -52,10 +52,52 @@ boundaryField
     NELEMENT
     {
         // positive ions are absorbed at the rear cathode
-        type            fixedValue;
-        value           uniform $nBound;
-        // the ion impact results in secondary electron emission see ne
-        //type            zeroGradient;
+        type            codedMixed;
+        name            nN2PositivityBC;
+
+        // create default reference values
+        refValue        uniform 0;
+        refGradient     uniform 0;
+        valueFraction   uniform 0;
+
+        code
+        #{
+        tmp<scalarField> tNN2Internal = patchInternalField();
+        const scalarField& nN2Internal = tNN2Internal();
+
+        scalarField& refVal = this->refValue();
+        scalarField& refGrad = this->refGrad();
+        scalarField& valFrac = this->valueFraction();
+
+        refVal = 0.0;
+        valFrac = 0.0;
+        refGrad = 0.0;
+
+        scalar nN2threshold = 0.0;
+
+        forAll(this->patch(), i)
+        {
+            scalar nN2 = nN2Internal[i];
+            scalar before = nN2;
+
+            scalar current = this->operator[](i);
+            scalar currentGrad = (nN2 - this->operator[](i)) * patch().deltaCoeffs()[i];
+
+            // discourage un-physical negative densities
+            nN2 = max(nN2, 0);
+
+            // normal gradient
+            refGrad[i] = currentGrad + 0.1 * (0 - currentGrad);
+
+            // enforced boundary value if valFrac[i] = 1
+            refVal[i] = nN2;
+
+            // flux driven - Neumann like (valFrac=0) ; value driven - Dirichlet like (valFrac=1)
+            // more weighted gradient if internal density is positive
+            scalar safetyFactor = 0.2;
+            valFrac[i] = 0.8 + safetyFactor * (nN2Internal[i] < nN2threshold ? 1.0 : 0.0);
+        }
+        #};
     }
 }
 

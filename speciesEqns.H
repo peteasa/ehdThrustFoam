@@ -1,13 +1,3 @@
-volVectorField Ue
-(
-    "Ue",
-    -mu_e * E
-);
-
-//surfaceScalarField phiUe = fvc::interpolate(Ue) & mesh.Sf();
-//surfaceScalarField phiEFlux_e = fvc::flux(-mu_e * E);
-//surfaceScalarField phiEFlux_e = fvc::flux(Ue);
-//surfaceScalarField phiEFlux_N2p = fvc::flux(mu_N2p * E);
 
 surfaceScalarField phi_e
 (
@@ -50,20 +40,35 @@ fvScalarMatrix nN2pEqn
 neEqn.relax();
 SolverPerformance<scalar> nePerf = neEqn.solve();
 
-// update the reference values
-ne.correctBoundaryConditions();
-
 // Print electron density residual
 if (Pstream::master() && enableDetailedLogs) Info << "Residual ne = " << nePerf.finalResidual() << nl;
 
 nN2pEqn.relax();
 SolverPerformance<scalar> nN2pPerf = nN2pEqn.solve();
 
-// update the reference values
-nN2p.correctBoundaryConditions();
-
 // Print ion density residual
 if (Pstream::master() && enableDetailedLogs) Info << "Residual nN2p = " << nN2pPerf.finalResidual() << nl;
+
+if (0)
+{
+    // Experimental
+    // suppress un-physical negative densities
+    // balance the minimum charge: nN2p - ne = 0
+    minNe = gMin(ne);
+    maxNe = gMax(ne);
+    minN2 = gMin(nN2p);
+    maxN2 = gMax(nN2p);
+
+    dimensionedScalar minNeLimD("minNeLimD", ne.dimensions(), minNeLim);
+    ne = 0.5 * (ne + sqrt(sqr(ne) + sqr(minNeLimD)));
+
+    dimensionedScalar minN2LimD("minN2LimD", ne.dimensions(), minN2Lim);
+    nN2p = 0.5 * (nN2p + sqrt(sqr(nN2p) + sqr(minN2LimD)));
+}
+
+// update the reference values
+ne.correctBoundaryConditions();
+nN2p.correctBoundaryConditions();
 
 if (enableDetailedLogs)
 {

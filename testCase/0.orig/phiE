@@ -43,25 +43,14 @@ boundaryField
 
     PELEMENT
     {
-        /*
-        type            fixedValue;
-        //type            mixed;
-        //value           uniform 3000;
-        //value           uniform 45000;
-        value           uniform 7000;
-        //refValue        uniform 45000;
-        //refGradient     uniform 0;
-        //valueFraction   uniform 0.1;
-        /**/
         type            uniformFixedValue;
 
         uniformValue    table
         (
          ( 0 10000 )
          ( 0.000009999 10000 )
-         ( 0.000010000 19000 )
+         ( 0.000010000 22000 )
         )
-        /**/
     }
 
     frontAndBackPlanes

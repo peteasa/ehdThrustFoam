@@ -42,16 +42,14 @@ boundaryField
 
     PELEMENT
     {
-        /*
         // electrons absorbed at the front anode
-        type            fixedValue;
-        value           uniform $nBound;
-        */
-        type codedMixed;
-        name nePositivityBC;
-        refValue uniform 0;
-        refGradient uniform 0;
-        valueFraction uniform 0;
+        type            codedMixed;
+        name            nePositivityBC;
+
+        // create default reference values
+        refValue        uniform 0;
+        refGradient     uniform 0;
+        valueFraction   uniform 0;
 
         code
         #{
@@ -62,9 +60,13 @@ boundaryField
         scalarField& refGrad = this->refGrad();
         scalarField& valFrac = this->valueFraction();
 
+        refVal = 0.0;
+        valFrac = 0.0;
+        refGrad = 0.0;
+
         scalar nethreshold = 0.0;
 
-        forAll(refGrad, i)
+        forAll(this->patch(), i)
         {
             scalar ne = neInternal[i];
             scalar before = ne;
@@ -85,11 +87,6 @@ boundaryField
             // more weighted gradient if internal density is positive
             scalar safetyFactor = 0.2;
             valFrac[i] = 0.8 + safetyFactor * (neInternal[i] < nethreshold ? 1.0 : 0.0);
-
-            if (0) // (current < 0)
-            {
-                Info << "PELEMENT ne current = " << current << " refVal= " << refVal[i] << " currentGrad = " << currentGrad << nl;
-            }
         }
         #};
     }
@@ -147,7 +144,7 @@ boundaryField
 
         scalar nethreshold = 0.0;
 
-        forAll(refGrad, i)
+        forAll(this->patch(), i)
         {
             scalar ne = neInternal[i];
             scalar before = ne;
@@ -188,11 +185,6 @@ boundaryField
             if (En < 1e-6) { refGrad[i] = 0; }
             if (neInternal[i] < 0) { refGrad[i] = 0; }
             if (nN2pInternal[i] < 0) { refGrad[i] = 0; }
-
-            if (0) //(current < 0)
-            {
-                Info << "NELEMENT ne current = " << current << " refVal= " << refVal[i] << " currentGrad = " << currentGrad << nl;
-            }
         }
         #};
     }
