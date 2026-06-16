@@ -82,23 +82,6 @@ int main(int argc, char *argv[])
 
     Info<< "\nStarting iteration loop\n" << nl;
 
-    // depending on the environment
-    scalar factMulti = 8.0;
-    int pwr = -10;
-    scalar factor = factMulti * pow(10.0, pwr);
-    bool factorChange = false;
-
-    // maxEeCo above 0.3: the simulation is likely to terminate early
-    scalar ecoHyperThresh = 0.3;
-    // maxEeCo above 0.2: reducing factor seems to reduce maxEeCo 0.2 -> 0.1
-    scalar ecoUpperThresh = 0.2;
-    // ecoLowerThresh lower than the expected normal reduction caused by factor changes
-    scalar ecoLowerThresh = 0.08;
-    scalar maxEeCo = (ecoUpperThresh + ecoLowerThresh) / 2;
-    scalar maxEeCo_old = maxEeCo;
-    // eeCoRateLimit is likely to be exceeded in the cycle after the factor is increased
-    scalar eeCoRateLimit = 0.5;
-
     scalar dtUpperLimit = 1e-6;
 
     scalar minNeLimI = 1.0e-2;
@@ -106,9 +89,45 @@ int main(int argc, char *argv[])
     scalar minNeLim = minNeLimI;
     scalar minN2Lim = minN2LimI;
 
+    // depending on the environment
+    scalar factMulti = 8.0;
+    int pwr = -10;
+    scalar factor = factMulti * pow(10.0, pwr);
+    bool factorChange = false;
+
+    /*************************************************************************/
+    /*                        Autoadjust parameters                          */
+    // manage changes in maxEeCo:
+    // divide factor by 10 if (ecoHyperThresh < maxEeCo) to avoid early termination
+    // suggest: between 0.3 -> 1.0
+    scalar ecoHyperThresh = 1.0;
+    // subtract one from the first none-zero digit of factor if (ecoUpperThresh < maxEeCo)
+    // suggest: ecoHyperThresh / 2
+    scalar ecoUpperThresh = ecoHyperThresh / 2;
+    // add one to factor if (maxEeCo < ecoLowerThresh) :- WARNING: avoid maxEeCo bounce by
+    // choosing a threshold lower than ecoUpperThresh: preferably lower then the expected
+    // reduction in maxEeCo caused by applying subraction of one as a result of maxEeCo
+    // exceeding ecoUpperThresh
+    // suggest ecoUpperThresh / 10
+    scalar ecoLowerThresh = ecoUpperThresh / 10;
+    scalar maxEeCo = (ecoUpperThresh + ecoLowerThresh) / 2;
+    scalar maxEeCo_old = maxEeCo;
+    // monitor the rate of change of maxEeCo:
+    // eeCoRateLimit is likely to be exceeded in the cycle after the factor is increased
+    // suggest: between 0.5 -> 1.0
+    scalar eeCoRateLimit = 1.0;
+
+    // manage changes in density min/max ratios
+    // if ne min/max ratio exceeds -0.9 then the simulation is very likely to terminate early
+    // suggest: between -0.9 -> -0.1
+    scalar ratioHThr = -0.1;
+    // clamp the density min value: suggest -0.01
     scalar ratioThr = -0.01;
-    scalar recoveryRatio = -0.00001;
+    // hysteresis value allows the system to recover from a clamping event
+    // suggest: ratioThr / 100
+    scalar recoveryRatio = ratioThr / 100;
     scalar minRatioThr = ratioThr;
+    /*************************************************************************/
 
     Info<< "currentTime = " << runTime.name() << nl;
     Info<< "endTime     = " << runTime.endTime().value() << nl;
@@ -176,8 +195,8 @@ int main(int argc, char *argv[])
                      << nl;
 
             // strong clamping
-            minRatioThr = ( (minNe / maxNe) < -0.1
-                               || (minN2 / maxN2) < -0.1 )
+            minRatioThr = ( (minNe / maxNe) < ratioHThr
+                               || (minN2 / maxN2) < ratioHThr )
                 ? ratioThr : minRatioThr;
         }
 
