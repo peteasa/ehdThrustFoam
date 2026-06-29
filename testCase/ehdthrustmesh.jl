@@ -24,7 +24,7 @@ thrust_surface_height = 0.1
 bounding_radius=0.10
 electrode_position=-0.005
 electrode_radius=0.001
-far_field_mesh_size=0.002
+far_field_mesh_size=0.004
 pelement_mesh_size=0.0001
 electrode_mesh_size=0.0001
 thrust_surface_mesh_size=0.0005
@@ -134,7 +134,7 @@ open("ehdthrust.geo","w")do io
         Printf("extruded surface %g: %g ", s, surfaceVector[s]);
     EndFor
     Physical Volume("internalField") = surfaceVector[1];
-    Physical Surface("frontAndBackPlanes") = {surfaceVector[0], surfaceVector[1]};
+    Physical Surface("frontAndBackPlanes") = {1, surfaceVector[0]};
     Physical Surface("INLET")={surfaceVector[$inlet_upper],surfaceVector[$inlet_lower]};
     Physical Surface("OUTLET")={surfaceVector[$outlet]};
     Physical Surface("WALL")={surfaceVector[$wall_lower],surfaceVector[$wall_upper]};
