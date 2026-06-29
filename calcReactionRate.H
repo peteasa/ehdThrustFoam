@@ -17,10 +17,11 @@ if (enableDetailedLogs)
 
 // ionisation N2 -> N2+ + e-
 // calculate source ion term (Sion) using the Townsend coefficient alpha
+dimensionedScalar smallE("smallE", magE.dimensions(), 1e3);
 volScalarField alpha
 (
     "alpha",
-    A * exp(-B / magE)
+    A * exp(-B / max(magE, smallE))
 );
 
 dimensionedScalar ionScale("ionScale", dimless, 1e-1);
