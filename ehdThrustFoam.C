@@ -128,6 +128,12 @@ int main(int argc, char *argv[])
     scalar recoveryRatio = ratioThr / 100;
     scalar minRatioThr = ratioThr;
     int minRCyCnt = 0;
+
+    // track the change in rho
+    scalar maxRhoEChangeRate = 0;
+    scalar maxRhoEChangeThr = 1e-4;
+    scalar maxRhoEChangeThrLim = maxRhoEChangeThr;
+    scalar changeRateDeltaLim = 6e-11;
     /*************************************************************************/
 
     Info<< "currentTime = " << runTime.name() << nl;
@@ -364,7 +370,7 @@ int main(int argc, char *argv[])
                     factor = factMulti * pow(10.0, pwr);
                     factorChange = true;
                 }
-                else if (!minRCyCnt && maxEeCo < ecoLowerThresh)
+                else if ((maxRhoEChangeRate < maxRhoEChangeThr) && !minRCyCnt && maxEeCo < ecoLowerThresh)
                 {
                     factMulti += 1.0;
                     if (9.0 < factMulti)
@@ -396,6 +402,7 @@ int main(int argc, char *argv[])
                     Info << "maxEeCo: " << maxEeCo << " eeCoRate: " << eeCoRate
                          << " factMulti: " << factMulti << " pwr: " << pwr
                          << " mnRCyCnt: " << minRCyCnt
+                         << " mxRhoEChRate: " << maxRhoEChangeRate
                          << " mnRatioThr: " << minRatioThr << nl;
                 maxEeCo_old = maxEeCo;
 
@@ -419,7 +426,9 @@ int main(int argc, char *argv[])
                 if (Pstream::master() && enableDetailedLogs) Info << "dt2: " << dt2 << nl;
                 scalar deltaT = min(dt1, dt2);
                 deltaT = min(deltaT, dtUpperLimit);
-                if (Pstream::master() && enableDetailedLogs) Info << "computed new deltaT: " << deltaT << nl;
+                maxRhoEChangeThr = maxRhoEChangeThrLim * deltaT / changeRateDeltaLim;
+                if (Pstream::master() && enableDetailedLogs) Info << "computed new deltaT: " << deltaT
+                                                                  << " maxRhoEChangeThr: " << maxRhoEChangeThr << nl;
 
                 runTime.setDeltaT(deltaT);
             }

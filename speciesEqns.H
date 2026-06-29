@@ -127,18 +127,21 @@ volScalarField rhoEOld
 // rhoE = eCharge * (- ne);
 rhoE = eCharge * (nN2p - ne);
 
-if (enableDetailedLogs)
+if (1)
 {
     scalar minRhoE = gMin(rhoE);
     scalar maxRhoE = gMax(rhoE);
-    if (Pstream::master()) Info << "min/max rhoE: " << minRhoE << " " << maxRhoE << nl;
+    scalar maxMagRhoE = max(mag(minRhoE), mag(maxRhoE));
+    if (enableDetailedLogs && Pstream::master()) Info << "min/max rhoE: " << minRhoE << " " << maxRhoE << nl;
 
     volScalarField magChange
     (
         "magChange",
         mag(rhoE - rhoEOld)
     );
-    scalar rhoChange = gMax(magChange);
-    if (Pstream::master()) Info << "max change in rhoE: " << rhoChange << nl;
+
+    scalar maxRhoEChange = gMax(magChange);
+    maxRhoEChangeRate = maxRhoEChange / maxMagRhoE;
+    if (enableDetailedLogs && Pstream::master()) Info << "maxRhoEChange: " << maxRhoEChange << " maxRhoEChangeRate: " << maxRhoEChangeRate << nl;
 }
 
