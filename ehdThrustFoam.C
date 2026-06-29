@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
     bool factorChange = false;
 
     /*************************************************************************/
-    /*                        Autoadjust parameters                          */
+    /*                       Auto adjust parameters                          */
     // manage changes in maxEeCo:
     // divide factor by 10 if (ecoHyperThresh < maxEeCo) to avoid early termination
     // suggest: between 0.3 -> 1.0
@@ -127,6 +127,7 @@ int main(int argc, char *argv[])
     // suggest: ratioThr / 100
     scalar recoveryRatio = ratioThr / 100;
     scalar minRatioThr = ratioThr;
+    int minRCyCnt = 0;
     /*************************************************************************/
 
     Info<< "currentTime = " << runTime.name() << nl;
@@ -173,11 +174,12 @@ int main(int argc, char *argv[])
         scalar maxNe = gMax(ne);
         scalar minN2 = gMin(nN2p);
         scalar maxN2 = gMax(nN2p);
-        if (minNeLim == minNeLimI && 0 < maxNe && 0 < maxN2)
+        if (0 < maxNe && 0 < maxN2)
         {
             // Experimental
-            minNeLim = minNeLimI * 1e-10;
-            minN2Lim = minN2LimI * 1e-10;
+            // allow larger negative densities as the max density increases
+            minNeLim = maxNe * (-ratioThr) * 1e-2 * minNeLimI;
+            minN2Lim = maxN2 * (-ratioThr) * 1e-2 * minN2LimI;
         }
 
         if (0 < maxNe && 0 < maxN2)
@@ -187,17 +189,27 @@ int main(int argc, char *argv[])
             // hysteresis for density correction recoveryRatio -> minRatioThr
             // This is an experiment to reduce negative densities
             minRatioThr = ( recoveryRatio < (minNe / maxNe)
-                               && recoveryRatio < (minN2 / maxN2) )
-                ? ratioThr : minRatioThr;
+                            && recoveryRatio < (minN2 / maxN2) ) ? ratioThr : minRatioThr;
+            if ( ratioThr == minRatioThr )
+            {
+                minRCyCnt = ( (minNe / maxNe) < minRatioThr
+                             || (minN2 / maxN2) < minRatioThr ) ? minRCyCnt + 1 : 0;
+            } else {
+                minRCyCnt = ( (minNe / maxNe) < recoveryRatio
+                              || (minN2 / maxN2) < recoveryRatio ) ? minRCyCnt + 1 : 0;
+            }
 
             if (old != minRatioThr && ratioThr == minRatioThr && Pstream::master())
                 Info << runTime.timeIndex() << ": min/max ne: " << minNe / maxNe << " nN2p: " << minN2 / maxN2
                      << nl;
 
             // strong clamping
-            minRatioThr = ( (minNe / maxNe) < ratioHThr
-                               || (minN2 / maxN2) < ratioHThr )
-                ? ratioThr : minRatioThr;
+            bool clampnow = ( (minNe / maxNe) < ratioHThr
+                || (minN2 / maxN2) < ratioHThr );
+            if (clampnow)
+            {
+                minRatioThr = ratioThr;
+            }
         }
 
         bool potCorrection = true;
@@ -211,17 +223,29 @@ int main(int argc, char *argv[])
                 // suppress un-physical negative densities
                 // balance the minimum charge: nN2p - ne = 0
                 if (enableDetailedLogs && 0 < maxNe && Pstream::master()) Info << "before clamp min/max ne: " << minNe << " " << maxNe
-                                                                               << " min/max: " << minNe / maxNe << nl;
+                                                                               << " min/max: " << minNe / maxNe
+                                                                               << " minNeLim: " << minNeLim << nl;
                 dimensionedScalar minNeLimD("minNeLimD", ne.dimensions(), minNeLim);
                 ne = 0.5 * (ne + sqrt(sqr(ne) + sqr(minNeLimD)));
 
                 if (enableDetailedLogs && 0 < maxN2 && Pstream::master()) Info << "before clamp min/max nN2p: " << minN2 << " " << maxN2
-                                                                               << " min/max: " << minN2 / maxN2 << nl;
+                                                                               << " min/max: " << minN2 / maxN2
+                                                                               << " minN2Lim: " << minN2Lim << nl;
                 dimensionedScalar minN2LimD("minN2LimD", ne.dimensions(), minN2Lim);
                 nN2p = 0.5 * (nN2p + sqrt(sqr(nN2p) + sqr(minN2LimD)));
 
                 // implement hysteresis using an arbitarily large negative number
                 minRatioThr = -VGREAT;
+
+                if (0 < maxNe && 0 < maxN2)
+                {
+                    // restart density hysteresis count
+                    minRCyCnt = ( (minNe / maxNe) < recoveryRatio
+                                  || (minN2 / maxN2) < recoveryRatio ) ? 1 : 0;
+                }
+
+                // densities likely to have been updated so update rhoE
+                rhoE = eCharge * (nN2p - ne);
             }
 
             if (nInitialIterations)
@@ -297,6 +321,37 @@ int main(int argc, char *argv[])
                     factor = factMulti * pow(10.0, pwr);
                     factorChange = true;
                 }
+                else if ( 1000 < minRCyCnt && ( (minNe / maxNe) < ratioHThr
+                                                || (minN2 / maxN2) < ratioHThr ) )
+                {
+                    factMulti -= 1.0;
+                    if (factMulti < 1.0)
+                    {
+                        pwr -= 1;
+                        factMulti = 9.0;
+                    }
+
+                    factor = factMulti * pow(10.0, pwr);
+                    factorChange = true;
+
+                    minRatioThr = ratioThr;
+                }
+                else if ( 3000 < minRCyCnt )
+                {
+                    factMulti -= 1.0;
+                    if (factMulti < 1.0)
+                    {
+                        pwr -= 1;
+                        factMulti = 9.0;
+                    }
+
+                    factor = factMulti * pow(10.0, pwr);
+                    factorChange = true;
+
+                    nInitialIterations = 50;
+                    minRatioThr = ratioThr;
+                    potCorrection = true;
+                }
                 else if (ecoUpperThresh < maxEeCo)
                 {
                     factMulti -= 1.0;
@@ -309,7 +364,7 @@ int main(int argc, char *argv[])
                     factor = factMulti * pow(10.0, pwr);
                     factorChange = true;
                 }
-                else if (maxEeCo < ecoLowerThresh)
+                else if (!minRCyCnt && maxEeCo < ecoLowerThresh)
                 {
                     factMulti += 1.0;
                     if (9.0 < factMulti)
@@ -325,6 +380,7 @@ int main(int argc, char *argv[])
                 if (factorChange)
                 {
                     enableDetailedLogs = true;
+                    minRCyCnt = 0;
                     if (ratioThr == minRatioThr && 0 < maxNe && 0 < maxN2
                         && ( (minNe / maxNe) < minRatioThr
                              || (minN2 / maxN2) < minRatioThr ))
@@ -339,8 +395,8 @@ int main(int argc, char *argv[])
                 if (Pstream::master() && enableDetailedLogs)
                     Info << "maxEeCo: " << maxEeCo << " eeCoRate: " << eeCoRate
                          << " factMulti: " << factMulti << " pwr: " << pwr
-                         << " prev maxEeCo: " << maxEeCo_old
-                         << " minRatioThr: " << minRatioThr << nl;
+                         << " mnRCyCnt: " << minRCyCnt
+                         << " mnRatioThr: " << minRatioThr << nl;
                 maxEeCo_old = maxEeCo;
 
                 // Now update the DeltaT value
