@@ -41,13 +41,13 @@ neEqn.relax();
 SolverPerformance<scalar> nePerf = neEqn.solve();
 
 // Print electron density residual
-if (Pstream::master() && enableDetailedLogs) Info << "Residual ne = " << nePerf.finalResidual() << nl;
+if (enableDetailedLogs && Pstream::master()) Info << "Residual ne = " << nePerf.finalResidual() << nl;
 
 nN2pEqn.relax();
 SolverPerformance<scalar> nN2pPerf = nN2pEqn.solve();
 
 // Print ion density residual
-if (Pstream::master() && enableDetailedLogs) Info << "Residual nN2p = " << nN2pPerf.finalResidual() << nl;
+if (enableDetailedLogs && Pstream::master()) Info << "Residual nN2p = " << nN2pPerf.finalResidual() << nl;
 
 if (0)
 {

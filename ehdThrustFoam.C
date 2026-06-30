@@ -127,13 +127,16 @@ int main(int argc, char *argv[])
     // suggest: ratioThr / 100
     scalar recoveryRatio = ratioThr / 100;
     scalar minRatioThr = ratioThr;
-    int minRCyCnt = 0;
+    // when minRCyDec is 0 any threshold violation will be acted on
+    int minRCyDec = 0;
 
     // track the change in rho
     scalar maxRhoEChangeRate = 0;
     scalar maxRhoEChangeThr = 1e-4;
     scalar maxRhoEChangeThrLim = maxRhoEChangeThr;
     scalar changeRateDeltaLim = 6e-11;
+    // when maxRhoEChangeDec is 0 any threshold violation will be acted on
+    int maxRhoEChangeDec = 0;
     /*************************************************************************/
 
     Info<< "currentTime = " << runTime.name() << nl;
@@ -148,7 +151,7 @@ int main(int argc, char *argv[])
     {
         int iterPerLogs = 1000;
         int enableDetailedLogs = !(runTime.timeIndex() % iterPerLogs);
-        if (nInitialIterations || runTime.timeIndex() < 10)
+        if (nInitialIterations || runTime.timeIndex() < 10 || runTime.deltaTValue() < 1e-40)
         {
             enableDetailedLogs = true;
         }
@@ -198,11 +201,11 @@ int main(int argc, char *argv[])
                             && recoveryRatio < (minN2 / maxN2) ) ? ratioThr : minRatioThr;
             if ( ratioThr == minRatioThr )
             {
-                minRCyCnt = ( (minNe / maxNe) < minRatioThr
-                             || (minN2 / maxN2) < minRatioThr ) ? minRCyCnt + 1 : 0;
+                minRCyDec = ( (minNe / maxNe) < minRatioThr
+                             || (minN2 / maxN2) < minRatioThr ) ? minRCyDec - 1 : 0;
             } else {
-                minRCyCnt = ( (minNe / maxNe) < recoveryRatio
-                              || (minN2 / maxN2) < recoveryRatio ) ? minRCyCnt + 1 : 0;
+                minRCyDec = ( (minNe / maxNe) < recoveryRatio
+                              || (minN2 / maxN2) < recoveryRatio ) ? minRCyDec - 1 : 0;
             }
 
             if (old != minRatioThr && ratioThr == minRatioThr && Pstream::master())
@@ -246,8 +249,15 @@ int main(int argc, char *argv[])
                 if (0 < maxNe && 0 < maxN2)
                 {
                     // restart density hysteresis count
-                    minRCyCnt = ( (minNe / maxNe) < recoveryRatio
-                                  || (minN2 / maxN2) < recoveryRatio ) ? 1 : 0;
+                    minRCyDec = ( (minNe / maxNe) < recoveryRatio
+                                  || (minN2 / maxN2) < recoveryRatio ) ? 3000 : 0;
+                }
+
+                if (0 < maxNe && 0 < maxN2)
+                {
+                    // restart rapid change count
+                    maxRhoEChangeDec = ((minNe / maxNe) < ratioHThr
+                                        || (minN2 / maxN2) < ratioHThr ) ? 50 : 1000;
                 }
 
                 // densities likely to have been updated so update rhoE
@@ -299,6 +309,7 @@ int main(int argc, char *argv[])
                 factorChange = false;
                 if (ecoLowerThresh < maxEeCo_old && eeCoRateLimit < eeCoRate)
                 {
+                    if (Pstream::master()) Info << "WARNING: eeCoRate is high" << nl;
                     nInitialIterations = 50;
                     minRatioThr = ratioThr;
                     potCorrection = true;
@@ -310,6 +321,7 @@ int main(int argc, char *argv[])
                 {
                     // previous change has had little effect
                     // reaction rate is changing rapidly still
+                    if (Pstream::master()) Info << "WARNING: eeCoRate is high" << nl;
                     nInitialIterations = 50;
                     factMulti -= 1.0;
                     if (factMulti < 1.0)
@@ -323,11 +335,12 @@ int main(int argc, char *argv[])
                 }
                 else if (ecoHyperThresh < maxEeCo)
                 {
+                    if (Pstream::master()) Info << "WARNING: maxEeCo is high" << nl;
                     pwr -= 1;
                     factor = factMulti * pow(10.0, pwr);
                     factorChange = true;
                 }
-                else if ( 1000 < minRCyCnt && ( (minNe / maxNe) < ratioHThr
+                else if ( minRCyDec && minRCyDec < 2000 && ( (minNe / maxNe) < ratioHThr
                                                 || (minN2 / maxN2) < ratioHThr ) )
                 {
                     factMulti -= 1.0;
@@ -342,8 +355,9 @@ int main(int argc, char *argv[])
 
                     minRatioThr = ratioThr;
                 }
-                else if ( 3000 < minRCyCnt )
+                else if ( minRCyDec < 0 )
                 {
+                    if (Pstream::master()) Info << "WARNING: correct for negative density" << nl;
                     factMulti -= 1.0;
                     if (factMulti < 1.0)
                     {
@@ -370,7 +384,7 @@ int main(int argc, char *argv[])
                     factor = factMulti * pow(10.0, pwr);
                     factorChange = true;
                 }
-                else if ((maxRhoEChangeRate < maxRhoEChangeThr) && !minRCyCnt && maxEeCo < ecoLowerThresh)
+                else if ((maxRhoEChangeRate < maxRhoEChangeThr) && minRCyDec == 0 && maxEeCo < ecoLowerThresh)
                 {
                     factMulti += 1.0;
                     if (9.0 < factMulti)
@@ -382,11 +396,28 @@ int main(int argc, char *argv[])
                     factor = factMulti * pow(10.0, pwr);
                     factorChange = true;
                 }
+                else if (maxRhoEChangeDec < 0)
+                {
+                    if (Pstream::master()) Info << "WARNING: correct for rapid density changes" << nl;
+                    maxRhoEChangeDec = 1000;
+                    factMulti -= 1.0;
+                    if (factMulti < 1.0)
+                    {
+                        pwr -= 1;
+                        factMulti = 9.0;
+                    }
+
+                    factor = factMulti * pow(10.0, pwr);
+                    factorChange = true;
+
+                    nInitialIterations = 50;
+                    minRatioThr = ratioThr;
+                    potCorrection = true;
+                }
 
                 if (factorChange)
                 {
                     enableDetailedLogs = true;
-                    minRCyCnt = 0;
                     if (ratioThr == minRatioThr && 0 < maxNe && 0 < maxN2
                         && ( (minNe / maxNe) < minRatioThr
                              || (minN2 / maxN2) < minRatioThr ))
@@ -398,36 +429,39 @@ int main(int argc, char *argv[])
                     }
                 }
 
-                if (Pstream::master() && enableDetailedLogs)
+                if (enableDetailedLogs && Pstream::master())
                     Info << "maxEeCo: " << maxEeCo << " eeCoRate: " << eeCoRate
                          << " factMulti: " << factMulti << " pwr: " << pwr
-                         << " mnRCyCnt: " << minRCyCnt
+                         << " mnRCyDec: " << minRCyDec
                          << " mxRhoEChRate: " << maxRhoEChangeRate
+                         << " mxRhoEChDec: " << maxRhoEChangeDec
                          << " mnRatioThr: " << minRatioThr << nl;
                 maxEeCo_old = maxEeCo;
 
                 // Now update the DeltaT value
                 scalar Vmax = gMax(mesh.V());
-                if (Pstream::master() && enableDetailedLogs) Info << "Vmax: " << Vmax << nl;
+                if (enableDetailedLogs && Pstream::master()) Info << "Vmax: " << Vmax << nl;
                 scalar meshDeltaX = min(Foam::exp(Foam::log(Vmax)/3.0), GREAT);
-                if (Pstream::master() && enableDetailedLogs) Info << "meshDeltaX: " << meshDeltaX << nl;
+                if (enableDetailedLogs && Pstream::master()) Info << "meshDeltaX: " << meshDeltaX << nl;
                 volScalarField magUe
                 (
                     "magUe",
                     mag(mu_e * E)
                 );
                 scalar maxDriftVelocity = gMax(magUe);
-                if (Pstream::master() && enableDetailedLogs) Info << "maxDriftVelocity: " << maxDriftVelocity << nl;
+                if (enableDetailedLogs && Pstream::master()) Info << "maxDriftVelocity: " << maxDriftVelocity << nl;
                 scalar dt1 = meshDeltaX / (50 * (maxDriftVelocity + SMALL));
-                if (Pstream::master() && enableDetailedLogs) Info << "dt1: " << dt1 << nl;
+                if (enableDetailedLogs && Pstream::master()) Info << "dt1: " << dt1 << nl;
 
                 maxReactionRate = max(maxReactionRate, SMALL);
                 scalar dt2 = factor / maxReactionRate;
-                if (Pstream::master() && enableDetailedLogs) Info << "dt2: " << dt2 << nl;
+                if (enableDetailedLogs && Pstream::master()) Info << "dt2: " << dt2 << nl;
                 scalar deltaT = min(dt1, dt2);
                 deltaT = min(deltaT, dtUpperLimit);
                 maxRhoEChangeThr = maxRhoEChangeThrLim * deltaT / changeRateDeltaLim;
-                if (Pstream::master() && enableDetailedLogs) Info << "computed new deltaT: " << deltaT
+                if (runTime.deltaTValue() < 1e-40) enableDetailedLogs = true;
+                if (enableDetailedLogs && Pstream::master()) Info << ((runTime.deltaTValue() < 1e-40) ? "WARNING: " : "")
+                                                                  << "computed new deltaT: " << deltaT
                                                                   << " maxRhoEChangeThr: " << maxRhoEChangeThr << nl;
 
                 runTime.setDeltaT(deltaT);
@@ -440,7 +474,7 @@ int main(int argc, char *argv[])
             // #include "setDeltaT.H" : instead opt for a dynamic DeltaT based on the reaction rate
         }
 
-        if (Pstream::master() && enableDetailedLogs) Info<< "Iteration = " << runTime.name() << " index: " << runTime.timeIndex() << nl << nl;
+        if (enableDetailedLogs && Pstream::master()) Info<< "Iteration = " << runTime.name() << " index: " << runTime.timeIndex() << nl << nl;
         while (pimple.loop())
         {
             for (int corr=0; corr<nPhiECorrectors; corr++)
@@ -598,7 +632,7 @@ int main(int argc, char *argv[])
 
         runTime.write();
 
-        if (Pstream::master() && enableDetailedLogs) Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
+        if (enableDetailedLogs && Pstream::master()) Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
             << "  ClockTime = " << runTime.elapsedClockTime() << " s"
             << nl << nl;
     }
