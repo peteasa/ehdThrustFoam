@@ -79,7 +79,6 @@ int main(int argc, char *argv[])
     scalar cumulativeContErr = 0.0;
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
     Info<< "\nStarting iteration loop\n" << nl;
 
     scalar dtUpperLimit = 1e-6;
@@ -145,13 +144,15 @@ int main(int argc, char *argv[])
     Info<< "runTime.run() = " << runTime.run() << nl;
     Info<< "runTime.loop() first check = " << runTime.loop() << nl;
 
-    int nInitialIterations = 50;
+    // ensure that Poisson Equation is run at appropriate times
+    int intervalCount = 0;
+    int maxInterval = 12;
     scalar PPhiE_old = 0;
     while (runTime.loop())
     {
         int iterPerLogs = 1000;
         int enableDetailedLogs = !(runTime.timeIndex() % iterPerLogs);
-        if (nInitialIterations || runTime.timeIndex() < 10 || runTime.deltaTValue() < 1e-40)
+        if (!(intervalCount % maxInterval) || runTime.timeIndex() < 10 || runTime.deltaTValue() < 1e-40)
         {
             enableDetailedLogs = true;
         }
@@ -168,10 +169,10 @@ int main(int argc, char *argv[])
 
             const fvPatchScalarField& pphiEpatch = phiE.boundaryField()[ppPatchID];
             scalar PPhiE = gMax(pphiEpatch);
-            if (!nInitialIterations && (1e-10 < mag(PPhiE - PPhiE_old)))
+            if ((intervalCount % maxInterval) && (1e-10 < mag(PPhiE - PPhiE_old)))
             {
                 if (Pstream::master()) Info << "PPhiE: " << PPhiE << " PPhiE - PPhiE_old: " << PPhiE - PPhiE_old << nl;
-                nInitialIterations = 50;
+                intervalCount = 0;
                 minRatioThr = ratioThr;
                 enableDetailedLogs = true;
             }
@@ -221,12 +222,32 @@ int main(int argc, char *argv[])
             }
         }
 
+        if (maxRhoEChangeThr < maxRhoEChangeRate)
+        {
+            maxRhoEChangeDec--;
+        }
+        else
+        {
+            // provide hysteresis to avoid rapid repeat
+            maxRhoEChangeDec = ((maxRhoEChangeDec < 500) && maxRhoEChangeRate < maxRhoEChangeThr / 10) ? 0 : maxRhoEChangeDec - 1;
+        }
+
+        if ( (maxRhoEChangeDec < 990)
+             && maxRhoEChangeThr < maxRhoEChangeRate
+             && ( (minNe / maxNe) < ratioHThr
+                 || (minN2 / maxN2) < ratioHThr ) )
+        {
+            if (Pstream::master()) Info << "WARNING: correct for multiple threshold violation!" << nl;
+            intervalCount = 0;
+            enableDetailedLogs = true;
+        }
+
         bool potCorrection = true;
         while (potCorrection)
         {
             potCorrection = false;
 
-            if (nInitialIterations)
+            if (!(intervalCount % maxInterval))
             {
                 // Experimental
                 // suppress un-physical negative densities
@@ -256,22 +277,25 @@ int main(int argc, char *argv[])
                 if (0 < maxNe && 0 < maxN2)
                 {
                     // restart rapid change count
-                    maxRhoEChangeDec = ((minNe / maxNe) < ratioHThr
-                                        || (minN2 / maxN2) < ratioHThr ) ? 50 : 1000;
+                    maxRhoEChangeDec = 1000;
                 }
 
                 // densities likely to have been updated so update rhoE
                 rhoE = eCharge * (nN2p - ne);
             }
 
-            if (nInitialIterations)
+            if (!(intervalCount % maxInterval))
             {
+                intervalCount = 1;
+                factorChange = true;
+
                 scalar minPhiE = gMax(phiE);
                 scalar maxPhiE = gMin(phiE);
                 if (Pstream::master()) Info << "Initialising phiE solving the Poisson equation at time " << runTime.name()
                                             << ": phiE extent = " << mag(maxPhiE - minPhiE) << nl;
 
-                for (int i = 0; i < nNonOrthogonalPotCorrectors && nInitialIterations; i++)
+                int nIterations = 50;
+                for (int i = 0; i < nNonOrthogonalPotCorrectors && nIterations; i++)
                 {
                     fvScalarMatrix phiInitEqn
                     (
@@ -281,7 +305,7 @@ int main(int argc, char *argv[])
                     );
 
                     SolverPerformance<scalar> pPerf = phiInitEqn.solve();
-                    nInitialIterations = pPerf.nIterations();
+                    nIterations = pPerf.nIterations();
                 }
 
                 // ensure E is well behaved at startup
@@ -307,10 +331,11 @@ int main(int argc, char *argv[])
                 scalar eeCoRate = (maxEeCo - maxEeCo_old) / maxEeCo_old;
                 scalar factorCh_old = factorChange;
                 factorChange = false;
+
                 if (ecoLowerThresh < maxEeCo_old && eeCoRateLimit < eeCoRate)
                 {
                     if (Pstream::master()) Info << "WARNING: eeCoRate is high" << nl;
-                    nInitialIterations = 50;
+                    intervalCount = 0;
                     minRatioThr = ratioThr;
                     potCorrection = true;
                     pwr -= 2;
@@ -322,7 +347,7 @@ int main(int argc, char *argv[])
                     // previous change has had little effect
                     // reaction rate is changing rapidly still
                     if (Pstream::master()) Info << "WARNING: eeCoRate is high" << nl;
-                    nInitialIterations = 50;
+                    intervalCount = 0;
                     factMulti -= 1.0;
                     if (factMulti < 1.0)
                     {
@@ -353,6 +378,8 @@ int main(int argc, char *argv[])
                     factor = factMulti * pow(10.0, pwr);
                     factorChange = true;
 
+                    if ((intervalCount % maxInterval) && (minNe / maxNe) < ratioHThr) intervalCount++;
+                    if ((intervalCount % maxInterval) && (minN2 / maxN2) < ratioHThr) intervalCount++;
                     minRatioThr = ratioThr;
                 }
                 else if ( minRCyDec < 0 )
@@ -368,7 +395,7 @@ int main(int argc, char *argv[])
                     factor = factMulti * pow(10.0, pwr);
                     factorChange = true;
 
-                    nInitialIterations = 50;
+                    intervalCount = 0;
                     minRatioThr = ratioThr;
                     potCorrection = true;
                 }
@@ -383,6 +410,8 @@ int main(int argc, char *argv[])
 
                     factor = factMulti * pow(10.0, pwr);
                     factorChange = true;
+
+                    if (intervalCount % maxInterval) intervalCount++;
                 }
                 else if ((maxRhoEChangeRate < maxRhoEChangeThr) && minRCyDec == 0 && maxEeCo < ecoLowerThresh)
                 {
@@ -400,17 +429,10 @@ int main(int argc, char *argv[])
                 {
                     if (Pstream::master()) Info << "WARNING: correct for rapid density changes" << nl;
                     maxRhoEChangeDec = 1000;
-                    factMulti -= 1.0;
-                    if (factMulti < 1.0)
-                    {
-                        pwr -= 1;
-                        factMulti = 9.0;
-                    }
 
-                    factor = factMulti * pow(10.0, pwr);
-                    factorChange = true;
+                    enableDetailedLogs = true;
 
-                    nInitialIterations = 50;
+                    intervalCount = 0;
                     minRatioThr = ratioThr;
                     potCorrection = true;
                 }
@@ -420,18 +442,34 @@ int main(int argc, char *argv[])
                     enableDetailedLogs = true;
                     if (ratioThr == minRatioThr && 0 < maxNe && 0 < maxN2
                         && ( (minNe / maxNe) < minRatioThr
-                             || (minN2 / maxN2) < minRatioThr ))
+                             || (minN2 / maxN2) < minRatioThr ) )
                     {
                         // Experimental
-                        nInitialIterations = 50;
+                        intervalCount = 0;
+                    }
+
+                    if (!(intervalCount % maxInterval))
+                    {
                         minRatioThr = ratioThr;
                         potCorrection = true;
                     }
                 }
 
+                if (1 && enableDetailedLogs && (ecoHyperThresh < maxEeCo) && Pstream::master())
+                    Info << runTime.timeIndex() << ": THRESH extreamly high maxEeCo: " << maxEeCo << nl;
+                else if (1 && enableDetailedLogs && (ecoUpperThresh < maxEeCo) && Pstream::master())
+                    Info << runTime.timeIndex() << ": THRESH very high maxEeCo: " << maxEeCo << nl;
+                if (enableDetailedLogs && (minNe / maxNe) < ratioHThr && Pstream::master())
+                    Info << runTime.timeIndex() << ": THRESH high min/max ne: " << minNe / maxNe << nl;
+                if (enableDetailedLogs && (minN2 / maxN2) < ratioHThr && Pstream::master())
+                    Info << runTime.timeIndex() << ": THRESH high min/max nN2p: " << minN2 / maxN2 << nl;
+                if (enableDetailedLogs && (maxRhoEChangeThr < maxRhoEChangeRate) && Pstream::master())
+                    Info << runTime.timeIndex() << ": THRESH rapid density changes maxRhoEChangeRate: " << maxRhoEChangeRate << nl;
+
                 if (enableDetailedLogs && Pstream::master())
                     Info << "maxEeCo: " << maxEeCo << " eeCoRate: " << eeCoRate
                          << " factMulti: " << factMulti << " pwr: " << pwr
+                         << " intervalCount: " << intervalCount
                          << " mnRCyDec: " << minRCyDec
                          << " mxRhoEChRate: " << maxRhoEChangeRate
                          << " mxRhoEChDec: " << maxRhoEChangeDec
