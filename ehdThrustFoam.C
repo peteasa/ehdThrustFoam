@@ -37,6 +37,7 @@ Description
 #include "surfaceFields.H"
 #include "fvMesh.H"
 #include "fvMatrices.H"
+#include "patchDistWave.H"
 
 #include "fvc.H"
 #include "fvcFlux.H"
