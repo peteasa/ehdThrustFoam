@@ -83,6 +83,68 @@ int main(int argc, char *argv[])
 
     scalar dtUpperLimit = 1e-6;
 
+    if (1 && runTime.value() < runTime.deltaTValue() * 4)
+    {
+        // create initial conditions only if starting from time zero!
+
+        if (Pstream::master()) Info << "create initial charge density at " << runTime.name() << nl;
+        // alternative for this is to use createZones and setFields
+        // however setFields only expects geometry defined zones so is not
+        // as flexible
+        label ppPatchID = mesh.boundaryMesh().findIndex("PELEMENT");
+
+        if (ppPatchID == -1)
+        {
+            FatalErrorInFunction
+                << "Patch PELEMENT not found"
+                << exit(FatalError);
+        }
+
+        labelHashSet patchIDs;
+        patchIDs.insert(ppPatchID);
+
+        scalarField cellDist(mesh.nCells(), GREAT);
+
+        Foam::patchDistWave::calculate
+        (
+            mesh,
+            patchIDs,
+            cellDist
+        );
+
+        volScalarField distanceToAnode
+        (
+            IOobject
+            (
+                "distanceToAnode",
+                runTime.name(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::AUTO_WRITE
+            ),
+            mesh,
+            dimensionedScalar("zero", dimLength, 0.0)
+         );
+
+        // copy internal field
+        forAll(cellDist, cellI)
+        {
+            distanceToAnode[cellI] = cellDist[cellI];
+        }
+
+        distanceToAnode.correctBoundaryConditions();
+
+        scalar sheathThickness = 200e-6;
+        forAll(mesh.C(), cellI)
+        {
+            if (distanceToAnode[cellI] < sheathThickness)
+            {
+                nN2p[cellI]  = 1e14;
+                ne[cellI]    = 1e14;
+            }
+        }
+    }
+
     scalar minNeLimI = 1.0e-2;
     scalar minN2LimI = 1.0e-2;
     scalar minNeLim = minNeLimI;
