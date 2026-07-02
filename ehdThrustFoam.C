@@ -195,7 +195,7 @@ int main(int argc, char *argv[])
         if (0 < maxNe && 0 < maxN2)
         {
             // Experimental
-            scalar old = minRatioThr;
+            scalar minRatioThrOld = minRatioThr;
             // hysteresis for density correction recoveryRatio -> minRatioThr
             // This is an experiment to reduce negative densities
             minRatioThr = ( recoveryRatio < (minNe / maxNe)
@@ -209,8 +209,8 @@ int main(int argc, char *argv[])
                               || (minN2 / maxN2) < recoveryRatio ) ? minRCyDec - 1 : 0;
             }
 
-            if (old != minRatioThr && ratioThr == minRatioThr && Pstream::master())
-                Info << runTime.timeIndex() << ": min/max ne: " << minNe / maxNe << " nN2p: " << minN2 / maxN2
+            if (minRatioThrOld != minRatioThr && ratioThr == minRatioThr && Pstream::master())
+                Info << runTime.timeIndex() << ": re-arm trigger min/max ne: " << minNe / maxNe << " nN2p: " << minN2 / maxN2
                      << nl;
 
             // strong clamping
@@ -230,16 +230,6 @@ int main(int argc, char *argv[])
         {
             // provide hysteresis to avoid rapid repeat
             maxRhoEChangeDec = ((maxRhoEChangeDec < 500) && maxRhoEChangeRate < maxRhoEChangeThr / 10) ? 0 : maxRhoEChangeDec - 1;
-        }
-
-        if ( (maxRhoEChangeDec < 990)
-             && maxRhoEChangeThr < maxRhoEChangeRate
-             && ( (minNe / maxNe) < ratioHThr
-                 || (minN2 / maxN2) < ratioHThr ) )
-        {
-            if (Pstream::master()) Info << "WARNING: correct for multiple threshold violation!" << nl;
-            intervalCount = 0;
-            enableDetailedLogs = true;
         }
 
         bool potCorrection = true;
@@ -274,11 +264,8 @@ int main(int argc, char *argv[])
                                   || (minN2 / maxN2) < recoveryRatio ) ? 3000 : 0;
                 }
 
-                if (0 < maxNe && 0 < maxN2)
-                {
-                    // restart rapid change count
-                    maxRhoEChangeDec = 1000;
-                }
+                // restart rapid change count
+                maxRhoEChangeDec = 1000;
 
                 // densities likely to have been updated so update rhoE
                 rhoE = eCharge * (nN2p - ne);
@@ -335,19 +322,17 @@ int main(int argc, char *argv[])
                 if (ecoLowerThresh < maxEeCo_old && eeCoRateLimit < eeCoRate)
                 {
                     if (Pstream::master()) Info << "WARNING: eeCoRate is high" << nl;
-                    intervalCount = 0;
-                    minRatioThr = ratioThr;
-                    potCorrection = true;
                     pwr -= 2;
                     factor = factMulti * pow(10.0, pwr);
                     factorChange = true;
+
+                    intervalCount = 0;
                 }
                 else if (factorCh_old && ecoUpperThresh < maxEeCo && eeCoRateLimit < eeCoRate)
                 {
                     // previous change has had little effect
                     // reaction rate is changing rapidly still
                     if (Pstream::master()) Info << "WARNING: eeCoRate is high" << nl;
-                    intervalCount = 0;
                     factMulti -= 1.0;
                     if (factMulti < 1.0)
                     {
@@ -357,6 +342,8 @@ int main(int argc, char *argv[])
 
                     factor = factMulti * pow(10.0, pwr);
                     factorChange = true;
+
+                    intervalCount = 0;
                 }
                 else if (ecoHyperThresh < maxEeCo)
                 {
@@ -380,7 +367,12 @@ int main(int argc, char *argv[])
 
                     if ((intervalCount % maxInterval) && (minNe / maxNe) < ratioHThr) intervalCount++;
                     if ((intervalCount % maxInterval) && (minN2 / maxN2) < ratioHThr) intervalCount++;
+
+                    scalar minRatioThrOld = minRatioThr;
                     minRatioThr = ratioThr;
+                    if (minRatioThrOld != minRatioThr && Pstream::master())
+                        Info << runTime.timeIndex() << ": force re-arm trigger min/max ne: " << minNe / maxNe
+                             << " nN2p: " << minN2 / maxN2 << nl;
                 }
                 else if ( minRCyDec < 0 )
                 {
@@ -396,8 +388,6 @@ int main(int argc, char *argv[])
                     factorChange = true;
 
                     intervalCount = 0;
-                    minRatioThr = ratioThr;
-                    potCorrection = true;
                 }
                 else if (ecoUpperThresh < maxEeCo)
                 {
@@ -425,11 +415,21 @@ int main(int argc, char *argv[])
                     factor = factMulti * pow(10.0, pwr);
                     factorChange = true;
                 }
+                else if ( (maxRhoEChangeDec < 990)
+                          && maxRhoEChangeThr < maxRhoEChangeRate
+                          && ( (minNe / maxNe) < ratioHThr
+                               || (minN2 / maxN2) < ratioHThr ) )
+                {
+                    if (Pstream::master()) Info << "WARNING: correct for multiple threshold violation!" << nl;
+                    pwr -= 1;
+                    factor = factMulti * pow(10.0, pwr);
+                    factorChange = true;
+
+                    intervalCount = 0;
+                }
                 else if (maxRhoEChangeDec < 0)
                 {
                     if (Pstream::master()) Info << "WARNING: correct for rapid density changes" << nl;
-                    maxRhoEChangeDec = 1000;
-
                     enableDetailedLogs = true;
 
                     intervalCount = 0;

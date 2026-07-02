@@ -141,7 +141,15 @@ if (1)
     );
 
     scalar maxRhoEChange = gMax(magChange);
-    maxRhoEChangeRate = maxRhoEChange / maxMagRhoE;
+    if (0 < maxMagRhoE)
+    {
+        maxRhoEChangeRate = maxRhoEChange / maxMagRhoE;
+    }
+    else
+    {
+        maxRhoEChangeRate = 0;
+    }
+
     if (enableDetailedLogs && Pstream::master()) Info << "maxRhoEChange: " << maxRhoEChange << " maxRhoEChangeRate: " << maxRhoEChangeRate << nl;
 }
 
