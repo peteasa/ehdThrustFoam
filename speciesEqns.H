@@ -1,24 +1,34 @@
 
-surfaceScalarField phi_e
+// convection term generated from the bulk neutral gas velocity
+surfaceScalarField phi_gas
 (
-    "phi_e",
-    ( fvc::interpolate(-mu_e * E) & mesh.Sf() )
+    "phi_gas",
+    fvc::flux(U)
 );
 
-//Info << "phi_e dimensions: " << phi_e.dimensions() << endl;
-
-surfaceScalarField phi_N2p
+// drift terms
+surfaceScalarField phi_de
 (
-    "phi_N2p",
-    ( fvc::interpolate(mu_N2p * E) & mesh.Sf() )
+    "phi_de",
+    fvc::flux(-mu_e * E)
+);
+
+//Info << "phi_de dimensions: " << phi_e.dimensions() << endl;
+
+surfaceScalarField phi_dN2p
+(
+    "phi_dN2p",
+    fvc::flux(mu_N2p * E)
 );
 
 //Info << "De dimensions: " << De.dimensions() << endl;
 
+// combine with the diffusion terms and the source terms
 fvScalarMatrix neEqn
 (
       fvm::ddt(ne)
-    + fvm::div(phi_e, ne)
+    + fvm::div(phi_gas, ne)
+    + fvm::div(phi_de, ne)
     - fvm::laplacian(De, ne)
  ==
     Sion
@@ -28,7 +38,8 @@ fvScalarMatrix neEqn
 fvScalarMatrix nN2pEqn
 (
       fvm::ddt(nN2p)
-    + fvm::div(phi_N2p, nN2p)
+    + fvm::div(phi_gas, nN2p)
+    + fvm::div(phi_dN2p, nN2p)
     - fvm::laplacian(DN2p, nN2p)
  ==
       Sion
