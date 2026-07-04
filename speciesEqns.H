@@ -142,25 +142,29 @@ if (1)
 {
     scalar minRhoE = gMin(rhoE);
     scalar maxRhoE = gMax(rhoE);
-    scalar maxMagRhoE = max(mag(minRhoE), mag(maxRhoE));
-    if (enableDetailedLogs && Pstream::master()) Info << "min/max rhoE: " << minRhoE << " " << maxRhoE << nl;
+    scalar maxMagRhoE = max(mag(minRhoE ), mag(maxRhoE ));
 
-    volScalarField magChange
+    volScalarField magDRhoEDt
     (
-        "magChange",
-        mag(rhoE - rhoEOld)
+        "magDRhoEDt",
+        mag(rhoE - rhoEOld)/runTime.deltaTValue()
     );
 
-    scalar maxRhoEChange = gMax(magChange);
+    scalar maxDRhoEDt = gMax(magDRhoEDt);
+
     if (0 < maxMagRhoE)
     {
-        maxRhoEChangeRate = maxRhoEChange / maxMagRhoE;
+        maxDRhoEDtRate = maxDRhoEDt / maxMagRhoE;
     }
     else
     {
-        maxRhoEChangeRate = 0;
+        maxDRhoEDtRate = 0;
     }
 
-    if (enableDetailedLogs && Pstream::master()) Info << "maxRhoEChange: " << maxRhoEChange << " maxRhoEChangeRate: " << maxRhoEChangeRate << nl;
+    if (enableDetailedLogs && Pstream::master()) Info << "min/max rhoE: " << minRhoE << " " << maxRhoE
+                                                << " maxDRhoEDt: " << maxDRhoEDt
+                                                << " maxDRhoEDtRate: " << maxDRhoEDtRate
+                                                << " maxMagRhoE: " << maxMagRhoE
+                                                << nl;
 }
 

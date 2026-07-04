@@ -140,8 +140,8 @@ int main(int argc, char *argv[])
         {
             if (distanceToAnode[cellI] < sheathThickness)
             {
-                nN2p[cellI]  = 1e14;
-                ne[cellI]    = 1e14;
+                nN2p[cellI]  = 1e15;
+                ne[cellI]    = 1e15;
             }
         }
     }
@@ -152,8 +152,8 @@ int main(int argc, char *argv[])
     scalar minN2Lim = minN2LimI;
 
     // depending on the environment
-    scalar factMulti = 8.0;
-    int pwr = -10;
+    scalar factMulti = 5.0;
+    int pwr = 8;
     scalar factor = factMulti * pow(10.0, pwr);
     bool factorChange = false;
 
@@ -193,12 +193,10 @@ int main(int argc, char *argv[])
     int minRCyDec = 0;
 
     // track the change in rho
-    scalar maxRhoEChangeRate = 0;
-    scalar maxRhoEChangeThr = 1e-4;
-    scalar maxRhoEChangeThrLim = maxRhoEChangeThr;
-    scalar changeRateDeltaLim = 6e-11;
-    // when maxRhoEChangeDec is 0 any threshold violation will be acted on
-    int maxRhoEChangeDec = 0;
+    scalar maxDRhoEDtRate = 0;
+    scalar maxDRhoEDtRateThr = 2e8;
+    // when maxDRhoEDtRateDec is 0 any threshold violation will be acted on
+    int maxDRhoEDtRateDec = 0;
     /*************************************************************************/
 
     Info<< "currentTime = " << runTime.name() << nl;
@@ -285,14 +283,24 @@ int main(int argc, char *argv[])
             }
         }
 
-        if (maxRhoEChangeThr < maxRhoEChangeRate)
+        if (maxDRhoEDtRateThr < maxDRhoEDtRate)
         {
-            maxRhoEChangeDec--;
+            if ((maxDRhoEDtRateDec < 990) && 10 * maxDRhoEDtRateThr < maxDRhoEDtRate)
+            {
+                if (Pstream::master()) Info << "WARNING: correct for very high density changes" << nl;
+                maxDRhoEDtRateDec = 0;
+
+                intervalCount = 0;
+                minRatioThr = ratioThr;
+                enableDetailedLogs = true;
+            }
+
+            maxDRhoEDtRateDec--;
         }
         else
         {
             // provide hysteresis to avoid rapid repeat
-            maxRhoEChangeDec = ((maxRhoEChangeDec < 500) && maxRhoEChangeRate < maxRhoEChangeThr / 10) ? 0 : maxRhoEChangeDec - 1;
+            maxDRhoEDtRateDec = ((maxDRhoEDtRateDec < 500) && maxDRhoEDtRate < maxDRhoEDtRateThr * 0.9) ? 0 : maxDRhoEDtRateDec - 1;
         }
 
         bool potCorrection = true;
@@ -328,7 +336,7 @@ int main(int argc, char *argv[])
                 }
 
                 // restart rapid change count
-                maxRhoEChangeDec = 1000;
+                maxDRhoEDtRateDec = 1000;
 
                 // densities likely to have been updated so update rhoE
                 rhoE = eCharge * (nN2p - ne);
@@ -382,16 +390,7 @@ int main(int argc, char *argv[])
                 scalar factorCh_old = factorChange;
                 factorChange = false;
 
-                if (ecoLowerThresh < maxEeCo_old && eeCoRateLimit < eeCoRate)
-                {
-                    if (Pstream::master()) Info << "WARNING: eeCoRate is high" << nl;
-                    pwr -= 2;
-                    factor = factMulti * pow(10.0, pwr);
-                    factorChange = true;
-
-                    intervalCount = 0;
-                }
-                else if (factorCh_old && ecoUpperThresh < maxEeCo && eeCoRateLimit < eeCoRate)
+                if (factorCh_old && ecoUpperThresh < maxEeCo && eeCoRateLimit < eeCoRate)
                 {
                     // previous change has had little effect
                     // reaction rate is changing rapidly still
@@ -466,7 +465,10 @@ int main(int argc, char *argv[])
 
                     if (intervalCount % maxInterval) intervalCount++;
                 }
-                else if ((maxRhoEChangeRate < maxRhoEChangeThr) && minRCyDec == 0 && maxEeCo < ecoLowerThresh)
+                else if ((maxDRhoEDtRate < maxDRhoEDtRateThr)
+                         && minRCyDec == 0
+                         && maxDRhoEDtRateDec == 0
+                         && maxEeCo < ecoLowerThresh)
                 {
                     factMulti += 1.0;
                     if (9.0 < factMulti)
@@ -478,8 +480,8 @@ int main(int argc, char *argv[])
                     factor = factMulti * pow(10.0, pwr);
                     factorChange = true;
                 }
-                else if ( (maxRhoEChangeDec < 990)
-                          && maxRhoEChangeThr < maxRhoEChangeRate
+                else if ( (maxDRhoEDtRateDec < 990)
+                          && maxDRhoEDtRateThr < maxDRhoEDtRate
                           && ( (minNe / maxNe) < ratioHThr
                                || (minN2 / maxN2) < ratioHThr ) )
                 {
@@ -489,8 +491,16 @@ int main(int argc, char *argv[])
                     factorChange = true;
 
                     intervalCount = 0;
+                } else if (ecoLowerThresh < maxEeCo_old && eeCoRateLimit < eeCoRate)
+                {
+                    if (Pstream::master()) Info << "WARNING: eeCoRate is high" << nl;
+                    pwr -= 2;
+                    factor = factMulti * pow(10.0, pwr);
+                    factorChange = true;
+
+                    intervalCount = 0;
                 }
-                else if (maxRhoEChangeDec < 0)
+                else if (maxDRhoEDtRateDec < 0)
                 {
                     if (Pstream::master()) Info << "WARNING: correct for rapid density changes" << nl;
                     enableDetailedLogs = true;
@@ -522,20 +532,20 @@ int main(int argc, char *argv[])
                     Info << runTime.timeIndex() << ": THRESH extreamly high maxEeCo: " << maxEeCo << nl;
                 else if (1 && enableDetailedLogs && (ecoUpperThresh < maxEeCo) && Pstream::master())
                     Info << runTime.timeIndex() << ": THRESH very high maxEeCo: " << maxEeCo << nl;
-                if (enableDetailedLogs && (minNe / maxNe) < ratioHThr && Pstream::master())
+                if (enableDetailedLogs && 0 < maxNe && (minNe / maxNe) < ratioHThr && Pstream::master())
                     Info << runTime.timeIndex() << ": THRESH high min/max ne: " << minNe / maxNe << nl;
-                if (enableDetailedLogs && (minN2 / maxN2) < ratioHThr && Pstream::master())
+                if (enableDetailedLogs && 0 < maxN2 && (minN2 / maxN2) < ratioHThr && Pstream::master())
                     Info << runTime.timeIndex() << ": THRESH high min/max nN2p: " << minN2 / maxN2 << nl;
-                if (enableDetailedLogs && (maxRhoEChangeThr < maxRhoEChangeRate) && Pstream::master())
-                    Info << runTime.timeIndex() << ": THRESH rapid density changes maxRhoEChangeRate: " << maxRhoEChangeRate << nl;
+                if (enableDetailedLogs && (maxDRhoEDtRateThr < maxDRhoEDtRate) && Pstream::master())
+                    Info << runTime.timeIndex() << ": THRESH rapid density changes maxDRhoEDtRate: " << maxDRhoEDtRate << nl;
 
                 if (enableDetailedLogs && Pstream::master())
                     Info << "maxEeCo: " << maxEeCo << " eeCoRate: " << eeCoRate
                          << " factMulti: " << factMulti << " pwr: " << pwr
                          << " intervalCount: " << intervalCount
                          << " mnRCyDec: " << minRCyDec
-                         << " mxRhoEChRate: " << maxRhoEChangeRate
-                         << " mxRhoEChDec: " << maxRhoEChangeDec
+                         << " mxDRDtRate: " << maxDRhoEDtRate
+                         << " mxDRDtRateDec: " << maxDRhoEDtRateDec
                          << " mnRatioThr: " << minRatioThr << nl;
                 maxEeCo_old = maxEeCo;
 
@@ -559,11 +569,10 @@ int main(int argc, char *argv[])
                 if (enableDetailedLogs && Pstream::master()) Info << "dt2: " << dt2 << nl;
                 scalar deltaT = min(dt1, dt2);
                 deltaT = min(deltaT, dtUpperLimit);
-                maxRhoEChangeThr = maxRhoEChangeThrLim * deltaT / changeRateDeltaLim;
                 if (runTime.deltaTValue() < 1e-40) enableDetailedLogs = true;
                 if (enableDetailedLogs && Pstream::master()) Info << ((runTime.deltaTValue() < 1e-40) ? "WARNING: " : "")
                                                                   << "computed new deltaT: " << deltaT
-                                                                  << " maxRhoEChangeThr: " << maxRhoEChangeThr << nl;
+                                                                  << " maxDRhoEDtRateThr: " << maxDRhoEDtRateThr << nl;
 
                 runTime.setDeltaT(deltaT);
             }
