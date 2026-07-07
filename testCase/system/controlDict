@@ -57,10 +57,12 @@ InfoSwitches
 
 // Defaults: dimensionSet 1; fileName 2; GAMGAgglomeration 1; level 2; lduMatrix 1; SolverPerformance 1; vtkUnstructuredReader 1;
 //   SolverPerformance   0; :- switch off "smoothSolver:  Solving for" and "DICPCG:  Solving for"
+//   GAMG                1; allows you to check the effect of nCellsInCoarsestLevel
 DebugSwitches
 {
     dimensionSet        1;
     fileName            2;
+    GAMG                0;
     GAMGAgglomeration   1;
     level               1;
     lduMatrix           1;
