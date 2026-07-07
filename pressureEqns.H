@@ -9,15 +9,15 @@ if (enableDetailedLogs)
 {
     scalar minRAU = gMin(rAU);
     scalar maxRAU = gMax(rAU);
-    if (Pstream::master()) Info << "rAU min/max: " << minRAU << " / " << maxRAU << endl;
+    if (Pstream::master()) Info << "rAU min/max: " << minRAU << " / " << maxRAU << nl;
 
     scalar minA = gMin(UEqn.A().ref());
     scalar maxA = gMax(UEqn.A().ref());
-    if (Pstream::master()) Info << "UEqn.A() min/max: " << minA << " / " << maxA << endl;
+    if (Pstream::master()) Info << "UEqn.A() min/max: " << minA << " / " << maxA << nl;
 
     vector minH = gMin(UEqn.H().ref());
     vector maxH = gMax(UEqn.H().ref());
-    if (Pstream::master()) Info << "UEqn.H() min/max: " << minH << " / " << maxH << endl;
+    if (Pstream::master()) Info << "UEqn.H() min/max: " << minH << " / " << maxH << nl;
 }
 
 rAU.correctBoundaryConditions();
@@ -30,3 +30,4 @@ surfaceScalarField phiHbyA
 );
 
 adjustPhi(phiHbyA, U, p);
+

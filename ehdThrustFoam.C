@@ -80,7 +80,8 @@ int main(int argc, char *argv[])
     scalar cumulativeContErr = 0.0;
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-    Info<< "\nStarting iteration loop\n" << nl;
+
+    if (Pstream::master()) Info<< "\nStarting iteration loop\n" << nl;
 
     scalar dtUpperLimit = 1e-6;
 
@@ -146,6 +147,7 @@ int main(int argc, char *argv[])
         }
     }
 
+    // arbitary non-zero startup values
     scalar minNeLimI = 1.0e-2;
     scalar minN2LimI = 1.0e-2;
     scalar minNeLim = minNeLimI;
@@ -199,11 +201,9 @@ int main(int argc, char *argv[])
     int maxDRhoEDtRateDec = 0;
     /*************************************************************************/
 
-    Info<< "currentTime = " << runTime.name() << nl;
-    Info<< "endTime     = " << runTime.endTime().value() << nl;
-    Info<< "deltaT      = " << runTime.deltaTValue() << nl;
-    Info<< "runTime.run() = " << runTime.run() << nl;
-    Info<< "runTime.loop() first check = " << runTime.loop() << nl;
+    if (Pstream::master()) Info << "currentTime   = " << runTime.name() << nl;
+    if (Pstream::master()) Info << "endTime       = " << runTime.endTime().value() << nl;
+    if (Pstream::master()) Info << "deltaT        = " << runTime.deltaTValue() << nl;
 
     // ensure that Poisson Equation is run at appropriate times
     int intervalCount = 0;
@@ -245,7 +245,7 @@ int main(int argc, char *argv[])
         scalar maxNe = gMax(ne);
         scalar minN2 = gMin(nN2p);
         scalar maxN2 = gMax(nN2p);
-        if (0 < maxNe && 0 < maxN2)
+        if (0 && 0 < maxNe && 0 < maxN2)
         {
             // Experimental
             // allow larger negative densities as the max density increases
@@ -350,7 +350,7 @@ int main(int argc, char *argv[])
                 scalar minPhiE = gMax(phiE);
                 scalar maxPhiE = gMin(phiE);
                 if (Pstream::master()) Info << "Initialising phiE solving the Poisson equation at time " << runTime.name()
-                                            << ": phiE extent = " << mag(maxPhiE - minPhiE) << nl;
+                                            << ": phiE extent: " << mag(maxPhiE - minPhiE) << nl;
 
                 int nIterations = 50;
                 for (int i = 0; i < nNonOrthogonalPotCorrectors && nIterations; i++)
@@ -373,8 +373,8 @@ int main(int argc, char *argv[])
 
                 minPhiE = gMin(phiE);
                 maxPhiE = gMax(phiE);
-                if (Pstream::master()) Info << "phiE initialised: min/max = " << minPhiE << " / " << maxPhiE
-                                            << ": phiE extent = " << mag(maxPhiE - minPhiE) << nl;
+                if (Pstream::master()) Info << "phiE initialised: min/max: " << minPhiE << " / " << maxPhiE
+                                            << " phiE extent: " << mag(maxPhiE - minPhiE) << nl;
             }
 
             if (2 < runTime.timeIndex())
@@ -584,7 +584,7 @@ int main(int argc, char *argv[])
             // #include "setDeltaT.H" : instead opt for a dynamic DeltaT based on the reaction rate
         }
 
-        if (enableDetailedLogs && Pstream::master()) Info<< "Iteration = " << runTime.name() << " index: " << runTime.timeIndex() << nl << nl;
+        if (enableDetailedLogs && Pstream::master()) Info<< "Iteration: " << runTime.name() << " index: " << runTime.timeIndex() << nl << nl;
         while (pimple.loop())
         {
             for (int corr=0; corr<nPhiECorrectors; corr++)
@@ -664,7 +664,7 @@ int main(int argc, char *argv[])
 
                     scalar minPhiE = gMin(phiE);
                     scalar maxPhiE = gMax(phiE);
-                    if (Pstream::master()) Info << "phiE min/max = " << minPhiE << " / " << maxPhiE << nl;
+                    if (Pstream::master()) Info << "phiE min/max: " << minPhiE << " / " << maxPhiE << nl;
                 }
             }
 
@@ -694,9 +694,6 @@ int main(int argc, char *argv[])
                     }
                 }
 
-                // recompute HbyA for better stability
-                HbyA = rAU * UEqn.H();
-
                 // correct velocity with updated rAU
                 U = HbyA - rAU * fvc::grad(p);
                 U.correctBoundaryConditions();
@@ -709,12 +706,31 @@ int main(int argc, char *argv[])
                     #include "continuityErrs.H"
                     volScalarField magU = mag(U);
                     scalar maxMagU = gMax(magU);
-                    if (Pstream::master()) Info << "Pressure corrector: max(U) = " << maxMagU << nl;
+                    if (Pstream::master()) Info << "Pressure corrector: max(U): " << maxMagU << nl;
                 }
             }
 
             // recompute phi with updated U
             phi = fvc::flux(U);
+
+            if (enableDetailedLogs)
+            {
+                dimensionedVector thrust = fvc::domainIntegrate(FEHD);
+
+                surfaceVectorField phiU(phi * fvc::interpolate(U));
+                vector num = gSum(phiU.primitiveField());
+                scalar den = gSum(phi.primitiveField());
+                vector Uavg = num / (den + SMALL);
+
+                dimensionedScalar power = fvc::domainIntegrate(FEHD & U);
+
+                // energy based velocity
+                // ie velocity required that would produce the same power
+                scalar v_eff = 0 < mag(thrust.value()) ? power.value() / mag(thrust.value()) : 0;
+                if (Pstream::master()) Info << "thrust: " << thrust << nl
+                                            << " Uavg: " << Uavg << nl
+                                            << " power: " << power << " v_eff: " << v_eff << nl;
+            }
 
             if (0)
             {
@@ -730,7 +746,7 @@ int main(int argc, char *argv[])
                     }
                 }
 
-                Info << "after clamp min/max U: " << min(mag(U.internalField())).value() << " " << max(mag(U.internalField())).value() << nl;
+                Info << "after clamp min/max U: " << min(mag(U.internalField())).value() << " / " << max(mag(U.internalField())).value() << nl;
 
                 // update the momentum with the updated U
                 momentumTransport->correct();
@@ -742,8 +758,8 @@ int main(int argc, char *argv[])
 
         runTime.write();
 
-        if (enableDetailedLogs && Pstream::master()) Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
-            << "  ClockTime = " << runTime.elapsedClockTime() << " s"
+        if (enableDetailedLogs && Pstream::master()) Info<< "ExecutionTime: " << runTime.elapsedCpuTime() << " s"
+            << "  ClockTime: " << runTime.elapsedClockTime() << " s"
             << nl << nl;
     }
 

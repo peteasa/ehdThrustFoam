@@ -1,4 +1,4 @@
-Info<< "Creating plasma species\n" << endl;
+if (Pstream::master()) Info<< "Creating plasma species\n" << nl;
 volScalarField ne
 (
     IOobject("ne", runTime.name(), mesh,
@@ -48,8 +48,8 @@ dimensionedScalar Te
 dimensionedScalar De = mu_e * Te;     //dimensionedScalar De("De", dimArea/dimTime, 0.01);
 dimensionedScalar DN2p = mu_N2p * Te; //dimensionedScalar DN2p("DN2p", dimArea/dimTime, 0.0001);
 
-Info << "De = " << De << endl
-     << "DN2p = " << DN2p << endl;
+if (Pstream::master()) Info << "De = " << De << nl
+     << "DN2p = " << DN2p << nl;
 
 // ionisation - for Townsend ionisation N2 -> N2+ + e-
 // dimless / dimLength

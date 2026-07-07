@@ -1,5 +1,5 @@
 
-Info<< "Reading physicalProperties\n" << endl;
+if (Pstream::master()) Info << "Reading physicalProperties\n" << nl;
 IOdictionary physicalProperties
 (
     IOobject
@@ -12,7 +12,7 @@ IOdictionary physicalProperties
     )
 );
 
-Info<< "Reading fvSolutionDict\n" << endl;
+if (Pstream::master()) Info << "Reading fvSolutionDict\n" << nl;
 IOdictionary fvSolutionDict
 (
     IOobject
@@ -28,7 +28,7 @@ IOdictionary fvSolutionDict
 
 // Transport properties
 
-Info<< "Reading field kinematic p\n" << endl;
+if (Pstream::master()) Info << "Reading field kinematic p\n" << nl;
 volScalarField p
 (
     IOobject
@@ -46,9 +46,9 @@ const dictionary& pDict = mesh.solution().subDict("solvers").subDict("p");
 label pRefCell = pDict.lookupOrDefault<label>("referenceCell", 0);
 scalar pRefValue = pDict.lookupOrDefault<scalar>("referenceValue", 0.0);
 
-Info << "p settings:  pRefCell = " << pRefCell << "  pRefValue = " << pRefValue << endl;
+if (Pstream::master()) Info << "p settings:  pRefCell = " << pRefCell << "  pRefValue = " << pRefValue << nl;
 
-Info<< "Reading field U\n" << endl;
+if (Pstream::master()) Info << "Reading field U\n" << nl;
 volVectorField U
 (
     IOobject
@@ -67,7 +67,7 @@ dimensionedScalar rho
     physicalProperties.lookup("rho")
 );
 
-Info<< "Reading field phi\n" << endl;
+if (Pstream::master()) Info << "Reading field phi\n" << nl;
 //#include "createPhi.H"
 surfaceScalarField phi
 (
@@ -84,8 +84,43 @@ surfaceScalarField phi
 const dictionary& potentialDict = fvSolutionDict.subDict("potentialFlow");
 int nNonOrthogonalPotCorrectors = potentialDict.lookupOrDefault<int>("nNonOrthogonalCorrectors", 50);
 
-Info << "potential init settings:" << endl
-     << "  nNonOrthogonalPotCorrectors      = " << nNonOrthogonalPotCorrectors << endl;
+if (Pstream::master()) Info << "potential init settings:" << endl
+     << "  nNonOrthogonalPotCorrectors      = " << nNonOrthogonalPotCorrectors << nl;
+
+const dictionary& solversDict = fvSolutionDict.subDict("solvers");
+const dictionary& solversPDict = solversDict.subDict("p");
+int nCellsInCoarsestLevel = solversPDict.lookupOrDefault<int>("nCellsInCoarsestLevel", 10);
+label total_cells = returnReduce(mesh.nCells(), sumOp<label>());
+label rank = Pstream::nProcs();
+{
+    // nCellsInCoarsestLevel tells GAMG when to stop agglomerating
+    // best to choose a number where GAMGSolver uses say 5 levels (level: 0 -> 4)
+    // with between 10 -> 1000 cells in the last level depending on total_cells
+    // GAMG agglomeration: grouping of fine cells into coarse "super-cells"
+    //     a good agglomeration produces coarse cells that still represent the physics
+    //     and the connectivity of the original mesh
+    //     too many levels and the calculation time increases
+    // Look at the cell reduction per level:
+    //     good: factors of ~5 –> 10
+    //      bad: tiny reductions followed by a huge collapse
+    // Look at the GAMG iteration count:
+    //     fewer iterations per time step/nonlinear iteration is better
+    //     if increasing levels makes GAMG slower, it is not worth it
+    // Check the coarse level:
+    //     avoid nCells:1 or a handful of cells unless the case is small
+    //     something in the range 50–500 cells is usually reasonable
+    // agglomeration quality matters more than the reduction factor:
+    //     a forced x5 reduction between each level creates that poor coarse meshes
+    //     can be worse than a x2.2 reduction with excellent agglomeration
+
+    if (Pstream::master()) Info << (((int(total_cells / (2.2 * 2.2 * 2.2 * 2.2 * rank)) - 1 < nCellsInCoarsestLevel)
+                                     || nCellsInCoarsestLevel < 10 ) ? "WARNING " : "")
+                                << "nCellsInCoarsestLevel: " << nCellsInCoarsestLevel
+                                << " total_cells / rank: " << total_cells / rank
+                                << " total_cells / (23.5 * rank) - 1: " << total_cells / (2.2 * 2.2 * 2.2 * 2.2 * rank) - 1
+                                << nl;
+    if (Pstream::master()) Info << "total_cells: " << total_cells << " nProcs: " << rank << nl;
+}
 
 const dictionary& pimpleDict = fvSolutionDict.subDict("PIMPLE");
 // New to ehdMultiSpeciesFoam
@@ -97,12 +132,12 @@ int nCorrectors      = pimpleDict.lookupOrDefault<int>("nCorrectors", 2);
 int nNonOrthogonalCorrectors = pimpleDict.lookupOrDefault<int>("nNonOrthogonalCorrectors", 0);
 bool momentumPredictor = pimpleDict.lookupOrDefault("momentumPredictor", true);
 
-Info << "PIMPLE settings:" << endl
-     << "  nPhiECorrectors      = " << nPhiECorrectors << endl
-     << "  nOuterCorrectors      = " << nOuterCorrectors << endl
-     << "  nCorrectors      = " << nCorrectors << endl
-     << "  nNonOrthogonalCorrectors = " << nNonOrthogonalCorrectors << endl
-     << "  momentumPredictor = " << (momentumPredictor ? "true" : "false") << endl;
+if (Pstream::master()) Info << "PIMPLE settings:" << nl
+     << "  nPhiECorrectors      = " << nPhiECorrectors << nl
+     << "  nOuterCorrectors      = " << nOuterCorrectors << nl
+     << "  nCorrectors      = " << nCorrectors << nl
+     << "  nNonOrthogonalCorrectors = " << nNonOrthogonalCorrectors << nl
+     << "  momentumPredictor = " << (momentumPredictor ? "true" : "false") << nl;
 
 autoPtr<viscosityModel> viscosity(viscosityModel::New(mesh));
 autoPtr<incompressible::momentumTransportModel> momentumTransport
@@ -122,7 +157,7 @@ dimensionedScalar eCharge
     physicalProperties.lookup("eCharge")
 );
 
-Info<< "Reading field phiE\n" << endl;
+if (Pstream::master()) Info << "Reading field phiE\n" << nl;
 volScalarField phiE
 (
     IOobject
