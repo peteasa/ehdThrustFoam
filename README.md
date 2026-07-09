@@ -35,4 +35,4 @@ Julia scripting language to create the model https://julialang.org/
 
 Gmsh to generate the model mesh https://gitlab.onelab.info/gmsh/gmsh.git
 
-The development for this solver is done on [gitlab](https://gitlab.com/paracpg/ehdthrustfoam)
+The development and documentation for this solver is on [gitlab](https://paracpg.gitlab.io/wikis/cfdpages.html)
