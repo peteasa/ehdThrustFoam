@@ -89,8 +89,8 @@ int main(int argc, char *argv[])
     {
         // create initial conditions only if starting from time zero!
         scalar sheathThickness = 200e-6;
-        scalar initNN2p = 1e12;
-        scalar initNe = 1e12;
+        scalar initNN2p = 1e10;
+        scalar initNe = 1e10;
         #include "initDensity.H"
     }
 
@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
 
     /*************************************************************************/
     // startup time - separate electrostatic and convection interaction
-    scalar startupT = 5.04e-7;
+    scalar startupT = 5.2e-7;
     scalar startupIncrement = 1 / 4e3;
 
     /*************************************************************************/
@@ -137,10 +137,10 @@ int main(int argc, char *argv[])
     // if ne min/max ratio exceeds -0.9 then the simulation is very likely to terminate early
     // suggest: between -0.9 -> -0.1
     // to disable use high negative value
-    scalar ratioHThr = -5e-3;
+    scalar ratioHThr = -4e-6;
     // clamp the density min value: suggest -0.01
     // to disable use high negative value
-    scalar ratioThr = -5e-5;
+    scalar ratioThr = -4e-8;
     // hysteresis value allows the system to recover from a clamping event
     // suggest: ratioThr / 100
     scalar recoveryRatio = ratioThr / 100;
@@ -153,6 +153,7 @@ int main(int argc, char *argv[])
     // to disable use high value
     scalar maxDRhoEDtRateThrInitial = 2e80;
     scalar maxDRhoEDtRateThrRunning = 5e8;
+    scalar maxDRhoEDtRateRunTime = 5.045e-7;
     scalar maxDRhoEDtRateThr = maxDRhoEDtRateThrInitial;
     // when maxDRhoEDtRateDec is 0 any threshold violation will be acted on
     int maxDRhoEDtRateDec = 0;
@@ -175,8 +176,9 @@ int main(int argc, char *argv[])
             enableDetailedLogs = true;
         }
 
-        if (runTime.value() < min(0.0, startupT))
+        if (runTime.value() < min(maxDRhoEDtRateRunTime, startupT))
         {
+            if (enableDetailedLogs && Pstream::master()) Info << "Slow Start: using initial maxDRhoEDtRate threshold @ time: " << runTime.name() << nl;
             maxDRhoEDtRateThr = maxDRhoEDtRateThrInitial;
         }
         else
