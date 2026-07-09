@@ -6,6 +6,27 @@ surfaceScalarField phi_gas
     fvc::flux(U)
 );
 
+if (startupT)
+{
+    if (1 && (runTime.value() < startupT))
+    {
+        if (enableDetailedLogs && Pstream::master()) Info << "DEBUG: Separate convection interaction @ time: " << runTime.name() << nl;
+        phi_gas = dimensionedScalar("zv", phi_gas.dimensions(), 0);
+        interactionStart = runTime.timeIndex();
+    }
+    else
+    {
+        int count = runTime.timeIndex() - interactionStart;
+        if (count < 1/startupIncrement)
+        {
+            // gradually increase impact of movement
+            dimensionedScalar gScale("gScale", dimless, startupIncrement * count);
+            if (enableDetailedLogs && Pstream::master()) Info << "gScale: " << startupIncrement * count << nl;
+            phi_gas *= gScale;
+        }
+    }
+}
+
 // drift terms
 surfaceScalarField phi_de
 (

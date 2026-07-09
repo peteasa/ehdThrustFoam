@@ -5,7 +5,7 @@ volScalarField magE
     mag(E)
 );
 
-if (enableDetailedLogs)
+if (0 && enableDetailedLogs)
 {
     scalar minE = gMin(magE);
     scalar maxE = gMax(magE);
@@ -49,7 +49,7 @@ volScalarField Rei
     kei * ne * nN2p
 );
 
-if (enableDetailedLogs)
+if (0 && enableDetailedLogs)
 {
     scalar minRei = gMin(Rei.internalField());
     scalar maxRei = gMax(Rei.internalField());

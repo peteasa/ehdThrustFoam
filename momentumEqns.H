@@ -12,6 +12,28 @@ if (enableDetailedLogs)
     if (Pstream::master()) Info << "min/max FEHD: " << minmagF << " " << maxmagF << nl;
 }
 
+if (startupT)
+{
+    if (1 && (runTime.value() < startupT))
+    {
+        if (enableDetailedLogs && Pstream::master()) Info << "DEBUG: Separate electrostatic interaction @ time: " << runTime.name() << nl;
+        FEHD = dimensionedVector("zv", FEHD.dimensions(), vector::zero);
+        interactionStart = runTime.timeIndex();
+    }
+    else
+    {
+        int count = runTime.timeIndex() - interactionStart;
+        if (count < 1/startupIncrement)
+        {
+            // gradually increase FEHD
+            dimensionedScalar fScale("fScale", dimless, startupIncrement * count);
+            if (enableDetailedLogs && Pstream::master()) Info << "fScale: " << startupIncrement * count << nl;
+            FEHD *= fScale;
+        }
+    }
+}
+
+
 fvVectorMatrix UEqn
 (
       fvm::ddt(U)

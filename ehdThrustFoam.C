@@ -88,63 +88,10 @@ int main(int argc, char *argv[])
     if (1 && runTime.value() < runTime.deltaTValue() * 4)
     {
         // create initial conditions only if starting from time zero!
-
-        if (Pstream::master()) Info << "create initial charge density at " << runTime.name() << nl;
-        // alternative for this is to use createZones and setFields
-        // however setFields only expects geometry defined zones so is not
-        // as flexible
-        label ppPatchID = mesh.boundaryMesh().findIndex("PELEMENT");
-
-        if (ppPatchID == -1)
-        {
-            FatalErrorInFunction
-                << "Patch PELEMENT not found"
-                << exit(FatalError);
-        }
-
-        labelHashSet patchIDs;
-        patchIDs.insert(ppPatchID);
-
-        scalarField cellDist(mesh.nCells(), GREAT);
-
-        Foam::patchDistWave::calculate
-        (
-            mesh,
-            patchIDs,
-            cellDist
-        );
-
-        volScalarField distanceToAnode
-        (
-            IOobject
-            (
-                "distanceToAnode",
-                runTime.name(),
-                mesh,
-                IOobject::NO_READ,
-                IOobject::AUTO_WRITE
-            ),
-            mesh,
-            dimensionedScalar("zero", dimLength, 0.0)
-         );
-
-        // copy internal field
-        forAll(cellDist, cellI)
-        {
-            distanceToAnode[cellI] = cellDist[cellI];
-        }
-
-        distanceToAnode.correctBoundaryConditions();
-
         scalar sheathThickness = 200e-6;
-        forAll(mesh.C(), cellI)
-        {
-            if (distanceToAnode[cellI] < sheathThickness)
-            {
-                nN2p[cellI]  = 1e15;
-                ne[cellI]    = 1e15;
-            }
-        }
+        scalar initNN2p = 1e10;
+        scalar initNe = 1e10;
+        #include "initDensity.H"
     }
 
     // arbitary non-zero startup values
@@ -155,9 +102,14 @@ int main(int argc, char *argv[])
 
     // depending on the environment
     scalar factMulti = 5.0;
-    int pwr = 8;
+    int pwr = -8;
     scalar factor = factMulti * pow(10.0, pwr);
     bool factorChange = false;
+
+    /*************************************************************************/
+    // startup time - separate electrostatic and convection interaction
+    scalar startupT = 3.0e-6;
+    scalar startupIncrement = 1 / 4e3;
 
     /*************************************************************************/
     /*                       Auto adjust parameters                          */
@@ -179,14 +131,16 @@ int main(int argc, char *argv[])
     // monitor the rate of change of maxEeCo:
     // eeCoRateLimit is likely to be exceeded in the cycle after the factor is increased
     // suggest: between 0.5 -> 1.0
-    scalar eeCoRateLimit = 1.0;
+    scalar eeCoRateLimit = 0.8;
 
     // manage changes in density min/max ratios
     // if ne min/max ratio exceeds -0.9 then the simulation is very likely to terminate early
     // suggest: between -0.9 -> -0.1
-    scalar ratioHThr = -0.1;
+    // to disable use high negative value
+    scalar ratioHThr = -5e-3;
     // clamp the density min value: suggest -0.01
-    scalar ratioThr = -0.01;
+    // to disable use high negative value
+    scalar ratioThr = -5e-5;
     // hysteresis value allows the system to recover from a clamping event
     // suggest: ratioThr / 100
     scalar recoveryRatio = ratioThr / 100;
@@ -196,7 +150,10 @@ int main(int argc, char *argv[])
 
     // track the change in rho
     scalar maxDRhoEDtRate = 0;
-    scalar maxDRhoEDtRateThr = 2e8;
+    // to disable use high value
+    scalar maxDRhoEDtRateThrInitial = 2e80;
+    scalar maxDRhoEDtRateThrRunning = 5e8;
+    scalar maxDRhoEDtRateThr = maxDRhoEDtRateThrInitial;
     // when maxDRhoEDtRateDec is 0 any threshold violation will be acted on
     int maxDRhoEDtRateDec = 0;
     /*************************************************************************/
@@ -216,6 +173,15 @@ int main(int argc, char *argv[])
         if (!(intervalCount % maxInterval) || runTime.timeIndex() < 10 || runTime.deltaTValue() < 1e-40)
         {
             enableDetailedLogs = true;
+        }
+
+        if (runTime.value() < min(0.0, startupT))
+        {
+            maxDRhoEDtRateThr = maxDRhoEDtRateThrInitial;
+        }
+        else
+        {
+            maxDRhoEDtRateThr = maxDRhoEDtRateThrRunning;
         }
 
         if (1)
@@ -265,7 +231,9 @@ int main(int argc, char *argv[])
             {
                 minRCyDec = ( (minNe / maxNe) < minRatioThr
                              || (minN2 / maxN2) < minRatioThr ) ? minRCyDec - 1 : 0;
-            } else {
+            }
+            else
+            {
                 minRCyDec = ( (minNe / maxNe) < recoveryRatio
                               || (minN2 / maxN2) < recoveryRatio ) ? minRCyDec - 1 : 0;
             }
@@ -693,6 +661,11 @@ int main(int argc, char *argv[])
                         phi = phiHbyA - pEqn.flux();
                     }
                 }
+
+                // recompute HbyA for better stability
+                //HbyA = rAU * UEqn.H();
+                HbyA = constrainHbyA(rAU*UEqn.H(), U, p);
+                // adjustPhi(phiHbyA, U, p);
 
                 // correct velocity with updated rAU
                 U = HbyA - rAU * fvc::grad(p);

@@ -81,6 +81,10 @@ surfaceScalarField phi
     fvc::flux(U)     // fvc::interpolate(U) & mesh.Sf()
 );
 
+// Manage a gradual change in the electrostatic and convection interactions
+int interactionStart = 0;
+
+// Stabilise phiE electrostatic potential
 const dictionary& potentialDict = fvSolutionDict.subDict("potentialFlow");
 int nNonOrthogonalPotCorrectors = potentialDict.lookupOrDefault<int>("nNonOrthogonalCorrectors", 50);
 
@@ -91,7 +95,7 @@ const dictionary& solversDict = fvSolutionDict.subDict("solvers");
 const dictionary& solversPDict = solversDict.subDict("p");
 int nCellsInCoarsestLevel = solversPDict.lookupOrDefault<int>("nCellsInCoarsestLevel", 10);
 label total_cells = returnReduce(mesh.nCells(), sumOp<label>());
-label rank = Pstream::nProcs();
+label maxRank = Pstream::nProcs();
 {
     // nCellsInCoarsestLevel tells GAMG when to stop agglomerating
     // best to choose a number where GAMGSolver uses say 5 levels (level: 0 -> 4)
@@ -113,13 +117,16 @@ label rank = Pstream::nProcs();
     //     a forced x5 reduction between each level creates that poor coarse meshes
     //     can be worse than a x2.2 reduction with excellent agglomeration
 
-    if (Pstream::master()) Info << (((int(total_cells / (2.2 * 2.2 * 2.2 * 2.2 * rank)) - 1 < nCellsInCoarsestLevel)
+    if (Pstream::master()) Info << (((int(total_cells / (2.2 * 2.2 * 2.2 * 2.2 * maxRank)) - 1 < nCellsInCoarsestLevel)
                                      || nCellsInCoarsestLevel < 10 ) ? "WARNING " : "")
                                 << "nCellsInCoarsestLevel: " << nCellsInCoarsestLevel
-                                << " total_cells / rank: " << total_cells / rank
-                                << " total_cells / (23.5 * rank) - 1: " << total_cells / (2.2 * 2.2 * 2.2 * 2.2 * rank) - 1
+                                << " total_cells / maxRank: " << total_cells / maxRank
+                                << " total_cells / (23.5 * maxRank) - 1: " << total_cells / (2.2 * 2.2 * 2.2 * 2.2 * maxRank) - 1
                                 << nl;
-    if (Pstream::master()) Info << "total_cells: " << total_cells << " nProcs: " << rank << nl;
+    if (((int(total_cells / (2.2 * 2.2 * 2.2 * 2.2 * maxRank)) - 1 < nCellsInCoarsestLevel)
+          || nCellsInCoarsestLevel < 10 ) && Pstream::master())
+        Info << "        to tune nCellsInCoarsestLevel enable DebugSwitches/GAMG" << nl;
+    if (Pstream::master()) Info << "total_cells: " << total_cells << " nProcs (maxRank): " << maxRank << nl;
 }
 
 const dictionary& pimpleDict = fvSolutionDict.subDict("PIMPLE");
