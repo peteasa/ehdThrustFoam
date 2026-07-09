@@ -10,7 +10,7 @@ if (startupT)
 {
     if (1 && (runTime.value() < startupT))
     {
-        if (enableDetailedLogs && Pstream::master()) Info << "DEBUG: Separate convection interaction @ time: " << runTime.name() << nl;
+        if (enableDetailedLogs && Pstream::master()) Info << "Slow Start: Separate convection interaction @ time: " << runTime.name() << nl;
         phi_gas = dimensionedScalar("zv", phi_gas.dimensions(), 0);
         interactionStart = runTime.timeIndex();
     }

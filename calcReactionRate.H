@@ -5,14 +5,14 @@ volScalarField magE
     mag(E)
 );
 
-if (0 && enableDetailedLogs)
+if (enableDetailedLogs)
 {
     scalar minE = gMin(magE);
     scalar maxE = gMax(magE);
     if (Pstream::master()) Info << "min/max magE: " << minE << " " << maxE << endl;
 
     label maxCell = findMax(magE);
-    if (Pstream::master()) Info<< "cell with max magE = " << maxCell << endl;
+    if (0 && Pstream::master()) Info<< "cell with max magE = " << maxCell << endl;
 }
 
 // ionisation N2 -> N2+ + e-
@@ -49,14 +49,14 @@ volScalarField Rei
     kei * ne * nN2p
 );
 
-if (0 && enableDetailedLogs)
+if (enableDetailedLogs)
 {
     scalar minRei = gMin(Rei.internalField());
     scalar maxRei = gMax(Rei.internalField());
     if (Pstream::master()) Info << "internal min/max Rei: " << minRei << " " << maxRei << endl;
 
     label maxCell = findMax(Rei);
-    if (Pstream::master()) Info<< "cell with max Rei = " << maxCell << endl;
+    if (0 && Pstream::master()) Info<< "cell with max Rei = " << maxCell << endl;
 }
 
 volScalarField reactionRate

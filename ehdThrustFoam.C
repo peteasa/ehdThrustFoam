@@ -89,8 +89,8 @@ int main(int argc, char *argv[])
     {
         // create initial conditions only if starting from time zero!
         scalar sheathThickness = 200e-6;
-        scalar initNN2p = 1e10;
-        scalar initNe = 1e10;
+        scalar initNN2p = 1e12;
+        scalar initNe = 1e12;
         #include "initDensity.H"
     }
 
@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
 
     /*************************************************************************/
     // startup time - separate electrostatic and convection interaction
-    scalar startupT = 3.0e-6;
+    scalar startupT = 5.04e-7;
     scalar startupIncrement = 1 / 4e3;
 
     /*************************************************************************/
