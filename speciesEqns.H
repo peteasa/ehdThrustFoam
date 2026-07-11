@@ -114,28 +114,12 @@ if (enableDetailedLogs)
 
 if (enableDetailedLogs)
 {
-    label nePatchID = mesh.boundaryMesh().findIndex("NELEMENT");
-    if (nePatchID < 0)
-    {
-        FatalErrorInFunction
-            << "Patch NELEMENT not found"
-            << exit(FatalError);
-    }
-
-    const fvPatchScalarField& nepatch = ne.boundaryField()[nePatchID];
+    const fvPatchScalarField& nepatch = ne.boundaryField()[nPatchID];
     scalar minNeP = gMin(nepatch);
     scalar maxNeP = gMax(nepatch);
     if (Pstream::master()) Info << "min/max ne at NELEMENT boundary: " << minNeP << " " << maxNeP << nl;
 
-    label pePatchID = mesh.boundaryMesh().findIndex("PELEMENT");
-    if (pePatchID < 0)
-    {
-        FatalErrorInFunction
-            << "Patch PELEMENT not found"
-            << exit(FatalError);
-    }
-
-    const fvPatchScalarField& pepatch = ne.boundaryField()[pePatchID];
+    const fvPatchScalarField& pepatch = ne.boundaryField()[pPatchID];
     scalar minPeP = gMin(pepatch);
     scalar maxPeP = gMax(pepatch);
     if (Pstream::master()) Info << "min/max ne at PELEMENT boundary: " << minPeP << " " << maxPeP << nl;
@@ -158,6 +142,59 @@ volScalarField rhoEOld
 
 // rhoE = eCharge * (- ne);
 rhoE = eCharge * (nN2p - ne);
+
+if (enableDetailedLogs)
+{
+    // calculate particle fluxes
+    surfaceScalarField GammaE
+    (
+        phi_gas * fvc::interpolate(ne)
+      + phi_de * fvc::interpolate(ne)
+      - De * fvc::snGrad(ne) * mesh.magSf()
+    );
+
+    //if (Pstream::master()) Info << "GammaE dimensions: " << GammaE.dimensions() << nl;
+    dimensionedScalar eAnodeI
+    (
+        "eAnodeI",
+        -eCharge * gSum(GammaE.boundaryField()[pPatchID])
+    );
+    dimensionedScalar eCathodeI
+    (
+        "eCathodeI",
+        -eCharge * gSum(GammaE.boundaryField()[nPatchID])
+    );
+
+    surfaceScalarField GammaN2p
+    (
+        phi_gas * fvc::interpolate(nN2p)
+      + phi_dN2p * fvc::interpolate(nN2p)
+      - DN2p * fvc::snGrad(nN2p) * mesh.magSf()
+    );
+
+    //if (Pstream::master()) Info << "GammaN2p dimensions: " << GammaN2p.dimensions() << nl;
+
+    dimensionedScalar N2pAnodeI
+    (
+        "N2pAnodeI",
+        eCharge * gSum(GammaN2p.boundaryField()[pPatchID])
+    );
+
+    dimensionedScalar N2pCathodeI
+    (
+        "N2pCathodeI",
+        eCharge * gSum(GammaN2p.boundaryField()[nPatchID])
+    );
+
+    scalar anodeI = eAnodeI.value() + N2pAnodeI.value();
+    scalar cathodeI = eCathodeI.value() + N2pCathodeI.value();
+
+    if (Pstream::master()) Info << "anode currents (e/N2): " << eAnodeI.value() << " "
+                                << N2pAnodeI.value() << nl;
+    if (Pstream::master()) Info << "cathode currents (e/N2): " << eCathodeI.value() << " "
+                                << N2pCathodeI.value() << nl;
+    if (Pstream::master()) Info << "anode/cathode currents: " << anodeI << " " << cathodeI << nl;
+}
 
 if (1)
 {

@@ -191,3 +191,18 @@ volVectorField E
     -fvc::grad(phiE)
 );
 
+label pPatchID = mesh.boundaryMesh().findIndex("PELEMENT");
+if (pPatchID < 0)
+{
+    FatalErrorInFunction
+        << "Patch PELEMENT not found"
+        << exit(FatalError);
+}
+
+label nPatchID = mesh.boundaryMesh().findIndex("NELEMENT");
+if (nPatchID < 0)
+{
+    FatalErrorInFunction
+        << "Patch NELEMENT not found"
+        << exit(FatalError);
+}

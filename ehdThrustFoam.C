@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-    if (Pstream::master()) Info<< "\nStarting iteration loop\n" << nl;
+    if (Pstream::master()) Info << "\nStarting iteration loop\n" << nl;
 
     scalar dtUpperLimit = 1e-6;
 
@@ -89,8 +89,8 @@ int main(int argc, char *argv[])
     {
         // create initial conditions only if starting from time zero!
         scalar sheathThickness = 200e-6;
-        scalar initNN2p = 1e12;
-        scalar initNe = 1e12;
+        scalar initNN2p = 1e11;
+        scalar initNe = 1e11;
         #include "initDensity.H"
     }
 
@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
 
     /*************************************************************************/
     // startup time - separate electrostatic and convection interaction
-    scalar startupT = 5.2e-7;
+    scalar startupT = 5.06e-7;
     scalar startupIncrement = 1 / 4e3;
 
     /*************************************************************************/
@@ -137,10 +137,10 @@ int main(int argc, char *argv[])
     // if ne min/max ratio exceeds -0.9 then the simulation is very likely to terminate early
     // suggest: between -0.9 -> -0.1
     // to disable use high negative value
-    scalar ratioHThr = -4e-6;
+    scalar ratioHThr = -6e-6;
     // clamp the density min value: suggest -0.01
     // to disable use high negative value
-    scalar ratioThr = -4e-8;
+    scalar ratioThr = -8e-8;
     // hysteresis value allows the system to recover from a clamping event
     // suggest: ratioThr / 100
     scalar recoveryRatio = ratioThr / 100;
@@ -153,7 +153,7 @@ int main(int argc, char *argv[])
     // to disable use high value
     scalar maxDRhoEDtRateThrInitial = 2e80;
     scalar maxDRhoEDtRateThrRunning = 5e8;
-    scalar maxDRhoEDtRateRunTime = 5.045e-7;
+    scalar maxDRhoEDtRateRunTime = 5.03e-7;
     scalar maxDRhoEDtRateThr = maxDRhoEDtRateThrInitial;
     // when maxDRhoEDtRateDec is 0 any threshold violation will be acted on
     int maxDRhoEDtRateDec = 0;
@@ -188,15 +188,7 @@ int main(int argc, char *argv[])
 
         if (1)
         {
-            label ppPatchID = mesh.boundaryMesh().findIndex("PELEMENT");
-            if (ppPatchID < 0)
-            {
-                FatalErrorInFunction
-                    << "Patch PELEMENT not found"
-                    << exit(FatalError);
-            }
-
-            const fvPatchScalarField& pphiEpatch = phiE.boundaryField()[ppPatchID];
+            const fvPatchScalarField& pphiEpatch = phiE.boundaryField()[pPatchID];
             scalar PPhiE = gMax(pphiEpatch);
             if ((intervalCount % maxInterval) && (1e-10 < mag(PPhiE - PPhiE_old)))
             {
@@ -587,32 +579,16 @@ int main(int argc, char *argv[])
                 E.correctBoundaryConditions();
                 if (enableDetailedLogs)
                 {
-                    label nePatchID = mesh.boundaryMesh().findIndex("NELEMENT");
-                    if (nePatchID < 0)
-                    {
-                        FatalErrorInFunction
-                            << "Patch NELEMENT not found"
-                            << exit(FatalError);
-                    }
-
-                    const fvPatchVectorField& nEpatch = E.boundaryField()[nePatchID];
-                    const tmp<vectorField> tnHat = mesh.boundary()[nePatchID].nf();
+                    const fvPatchVectorField& nEpatch = E.boundaryField()[nPatchID];
+                    const tmp<vectorField> tnHat = mesh.boundary()[nPatchID].nf();
                     const vectorField& nHat = tnHat();
                     scalarField nEn = nEpatch & nHat;
                     scalar minNEn = gMin(nEn);
                     scalar maxNEn = gMax(nEn);
                     if (Pstream::master()) Info << "min/max En at NELEMENT boundary: " << minNEn << " " << maxNEn << nl;
 
-                    label pePatchID = mesh.boundaryMesh().findIndex("PELEMENT");
-                    if (pePatchID < 0)
-                    {
-                        FatalErrorInFunction
-                            << "Patch PELEMENT not found"
-                            << exit(FatalError);
-                    }
-
-                    const fvPatchVectorField& pEpatch = E.boundaryField()[pePatchID];
-                    const tmp<vectorField> tpHat = mesh.boundary()[pePatchID].nf();
+                    const fvPatchVectorField& pEpatch = E.boundaryField()[pPatchID];
+                    const tmp<vectorField> tpHat = mesh.boundary()[pPatchID].nf();
                     const vectorField& pHat = tpHat();
                     scalarField pEn = pEpatch & pHat;
                     scalar minPEn = gMin(pEn);
