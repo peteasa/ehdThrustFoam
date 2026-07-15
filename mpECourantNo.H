@@ -45,20 +45,11 @@
 
     if (enableDetailedLogs)
     {
-        volVectorField Ue
-        (
-            "Ue",
-            -mu_e * E
-        );
+        tmp<volVectorField> Ue = -mu_e * E;
+        tmp<volScalarField> magUe = mag(Ue());
 
-        volScalarField magUe
-        (
-            "magUe",
-             mag(Ue)
-        );
-
-        scalar minMagUe = gMin(magUe);
-        scalar maxMagUe = gMax(magUe);
+        scalar minMagUe = gMin(magUe());
+        scalar maxMagUe = gMax(magUe());
         if (Pstream::master()) Info << "Ue min/max: " << minMagUe << " / " << maxMagUe << nl;
 
         scalar minPhiEFlux_e = gMin(phiEFlux_e);

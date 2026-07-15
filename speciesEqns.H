@@ -143,56 +143,43 @@ volScalarField rhoEOld
 // rhoE = eCharge * (- ne);
 rhoE = eCharge * (nN2p - ne);
 
+// calculate particle fluxes
+GammaE = U * ne - mu_e * E * ne - De * fvc::grad(ne);
+GammaN2p = U * nN2p + mu_N2p * E * nN2p - DN2p * fvc::grad(nN2p);
+Je = - eCharge * GammaE;
+JN2p = eCharge * GammaN2p;
+J = Je + JN2p;
+
 if (enableDetailedLogs)
 {
-    // calculate particle fluxes
-    surfaceScalarField GammaE
+    auto currentOnPatch = []
     (
-        phi_gas * fvc::interpolate(ne)
-      + phi_de * fvc::interpolate(ne)
-      - De * fvc::snGrad(ne) * mesh.magSf()
-    );
+        const Foam::fvMesh& mesh,
+        const volVectorField& Jfield,
+        const label patchID
+    )
+    {
+        return gSum
+        (
+            Jfield.boundaryField()[patchID]
+            &
+            mesh.Sf().boundaryField()[patchID]
+        );
+    };
 
-    //if (Pstream::master()) Info << "GammaE dimensions: " << GammaE.dimensions() << nl;
-    dimensionedScalar eAnodeI
-    (
-        "eAnodeI",
-        -eCharge * gSum(GammaE.boundaryField()[pPatchID])
-    );
-    dimensionedScalar eCathodeI
-    (
-        "eCathodeI",
-        -eCharge * gSum(GammaE.boundaryField()[nPatchID])
-    );
+    scalar eAnodeI = currentOnPatch(mesh, Je, pPatchID);
+    scalar eCathodeI = currentOnPatch(mesh, Je, nPatchID);
 
-    surfaceScalarField GammaN2p
-    (
-        phi_gas * fvc::interpolate(nN2p)
-      + phi_dN2p * fvc::interpolate(nN2p)
-      - DN2p * fvc::snGrad(nN2p) * mesh.magSf()
-    );
+    scalar N2pAnodeI = currentOnPatch(mesh, JN2p, pPatchID);
+    scalar N2pCathodeI = currentOnPatch(mesh, JN2p, nPatchID);
 
-    //if (Pstream::master()) Info << "GammaN2p dimensions: " << GammaN2p.dimensions() << nl;
+    scalar anodeI = eAnodeI + N2pAnodeI;
+    scalar cathodeI = eCathodeI + N2pCathodeI;
 
-    dimensionedScalar N2pAnodeI
-    (
-        "N2pAnodeI",
-        eCharge * gSum(GammaN2p.boundaryField()[pPatchID])
-    );
-
-    dimensionedScalar N2pCathodeI
-    (
-        "N2pCathodeI",
-        eCharge * gSum(GammaN2p.boundaryField()[nPatchID])
-    );
-
-    scalar anodeI = eAnodeI.value() + N2pAnodeI.value();
-    scalar cathodeI = eCathodeI.value() + N2pCathodeI.value();
-
-    if (Pstream::master()) Info << "anode currents (e/N2): " << eAnodeI.value() << " "
-                                << N2pAnodeI.value() << nl;
-    if (Pstream::master()) Info << "cathode currents (e/N2): " << eCathodeI.value() << " "
-                                << N2pCathodeI.value() << nl;
+    if (Pstream::master()) Info << "anode currents (e/N2): " << eAnodeI << " "
+                                << N2pAnodeI << nl;
+    if (Pstream::master()) Info << "cathode currents (e/N2): " << eCathodeI << " "
+                                << N2pCathodeI << nl;
     if (Pstream::master()) Info << "anode/cathode currents: " << anodeI << " " << cathodeI << nl;
 }
 
