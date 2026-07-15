@@ -55,6 +55,20 @@ solvers
         relTol          0;
     }
 
+    T
+    {
+        solver          smoothSolver;
+        smoother        symGaussSeidel;
+        tolerance       1e-8;
+        relTol          0.1;
+    }
+
+    TFinal
+    {
+        $T;
+        relTol         0;
+    }
+
     Phi
     {
         $p;

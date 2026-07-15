@@ -1,4 +1,19 @@
 
+De = mu_e * Te;
+DN2p = mu_N2p * Te;
+
+if (enableDetailedLogs)
+{
+    scalar minDe = gMin(De.internalField());
+    scalar maxDe = gMax(De.internalField());
+
+    scalar minDN2p = gMin(DN2p.internalField());
+    scalar maxDN2p = gMax(DN2p.internalField());
+
+    if (Pstream::master()) Info << "De min/max: " << minDe << " " << maxDe << nl
+                            << "DN2p min/max: " << minDN2p << " " << maxDN2p << nl;
+}
+
 // convection term generated from the bulk neutral gas velocity
 surfaceScalarField phi_gas
 (

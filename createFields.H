@@ -42,6 +42,11 @@ volScalarField p
     mesh
 );
 
+dimensionedScalar Pref
+(
+    physicalProperties.lookup("Pref")
+);
+
 const dictionary& pDict = mesh.solution().subDict("solvers").subDict("p");
 label pRefCell = pDict.lookupOrDefault<label>("referenceCell", 0);
 scalar pRefValue = pDict.lookupOrDefault<scalar>("referenceValue", 0.0);
@@ -79,6 +84,53 @@ surfaceScalarField phi
         IOobject::AUTO_WRITE
     ),
     fvc::flux(U)     // fvc::interpolate(U) & mesh.Sf()
+);
+
+if (Pstream::master()) Info << "Reading field T\n" << nl;
+volScalarField T
+(
+    IOobject
+    (
+        "T",
+        runTime.name(),
+        mesh,
+        IOobject::MUST_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh
+);
+
+volScalarField Pphys
+(
+    IOobject ( "Pphys", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    Pref + rho * p
+);
+
+dimensionedScalar TC0ref
+(
+    "TC0ref",
+    dimTemperature,
+    273.15
+);
+
+volScalarField Peff
+(
+    IOobject ( "Peff", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    Pphys * ( TC0ref / T )
+);
+
+dimensionedScalar Psearef
+(
+    "Psearef",
+    Pphys.dimensions(),
+    101325.0
+);
+
+// relative air density
+volScalarField delta
+(
+    IOobject ( "delta", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    ( Pphys / Psearef ) * ( TC0ref / T )
 );
 
 // Manage a gradual change in the electrostatic and convection interactions
@@ -150,6 +202,89 @@ autoPtr<viscosityModel> viscosity(viscosityModel::New(mesh));
 autoPtr<incompressible::momentumTransportModel> momentumTransport
 (
     incompressible::momentumTransportModel::New(U, phi, viscosity)
+);
+
+// Thermal properties
+dimensionedScalar Pr
+(
+    physicalProperties.lookup("Pr")
+);
+
+dimensionedScalar Prt
+(
+    physicalProperties.lookup("Prt")
+);
+
+dimensionedScalar Tzero
+(
+    "Tzero",
+    dimTemperature,
+    273.15
+);
+
+// Magnus-Tetens approximation
+volScalarField Tc
+(
+    IOobject ( "Tc", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    T - Tzero
+);
+
+dimensionedScalar Psat0
+(
+    "Psat0",
+    dimPressure,
+    610.78
+);
+
+volScalarField Psat
+(
+    IOobject ( "Psat", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    Psat0 * exp( 17.27 * Tc / (Tc + dimensionedScalar("mtA", dimTemperature, 237.3)) )
+);
+
+dimensionedScalar RH
+(
+    physicalProperties.lookup("RH")
+);
+
+volScalarField PH20
+(
+    IOobject ( "PH20", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    RH * Psat
+);
+
+volScalarField xH20
+(
+    IOobject ( "xH20", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    PH20 / Pphys
+);
+
+dimensionedScalar Cp0
+(
+    "Cp0",
+    dimEnergy/dimMass/dimTemperature,
+    1005.0
+);
+
+dimensionedScalar CpSlope
+(
+    "CpSlope",
+    dimensionSet(0,2,-2,-2,0,0,0),
+    0.1
+);
+
+dimensionedScalar CpRef
+(
+    "CpRef",
+    dimTemperature,
+    300.0
+);
+
+volScalarField Cp
+(
+    IOobject ( "Cp", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    mesh,
+    Cp0
 );
 
 // Electrostatic properties

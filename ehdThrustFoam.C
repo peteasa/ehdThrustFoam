@@ -89,8 +89,8 @@ int main(int argc, char *argv[])
     {
         // create initial conditions only if starting from time zero!
         scalar sheathThickness = 200e-6;
-        scalar initNN2p = 1e11;
         scalar initNe = 1e11;
+        scalar initNN2p = 1e11;
         #include "initDensity.H"
     }
 
@@ -663,6 +663,8 @@ int main(int argc, char *argv[])
 
             // recompute phi with updated U
             phi = fvc::flux(U);
+
+            #include "thermalEqns.H"
 
             if (enableDetailedLogs)
             {

@@ -33,7 +33,6 @@ if (startupT)
     }
 }
 
-
 fvVectorMatrix UEqn
 (
       fvm::ddt(U)

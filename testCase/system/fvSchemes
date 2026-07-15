@@ -45,6 +45,7 @@ divSchemes
     div(phi,k)      $turbulence;
     div(phi,omega)  $turbulence;
     div(phi,epsilon) $turbulence;
+    div(phi,T)      $turbulence;
 
     div((nuEff*dev2(T(grad(U))))) Gauss linear;
 
@@ -67,6 +68,7 @@ laplacianSchemes
 
     laplacian(De,ne)      Gauss linear corrected;
     laplacian(DN2p,nN2p)  Gauss linear corrected;
+    laplacian(alphaEff,T)  Gauss linear corrected;
 }
 
 interpolationSchemes

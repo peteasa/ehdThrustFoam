@@ -42,8 +42,8 @@
     {
         if (distanceToAnode[cellI] < sheathThickness)
         {
-            nN2p[cellI]  = initNN2p;
             ne[cellI]    = initNe;
+            nN2p[cellI]  = initNN2p;
         }
     }
 }

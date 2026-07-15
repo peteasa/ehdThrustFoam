@@ -26,17 +26,34 @@ volScalarField rhoE
     eCharge * ( nN2p - ne )
 );
 
+dimensionedScalar beta
+(
+    physicalProperties.lookup("beta")
+);
+
 dimensionSet dimVoltage(1, 2, -3, 0, 0, -1, 0);
 
 // dimArea / dimVoltage / dimTime
-dimensionedScalar mu_e
+dimensionedScalar mu_e0
 (
-    physicalProperties.lookup("mu_e")
+    physicalProperties.lookup("mu_e0")
 );
 
-dimensionedScalar mu_N2p
+volScalarField mu_e
 (
-    physicalProperties.lookup("mu_N2p")
+    IOobject ( "mu_e", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    mu_e0 * (1.0 - beta * xH20) / Peff
+);
+
+dimensionedScalar mu_N2p0
+(
+    physicalProperties.lookup("mu_N2p0")
+);
+
+volScalarField mu_N2p
+(
+    IOobject ( "mu_N2p", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    mu_N2p0 * (1.0 - beta * xH20) / Peff
 );
 
 // 2 eV dimTemperature
@@ -45,11 +62,19 @@ dimensionedScalar Te
     physicalProperties.lookup("Te")
 );
 
-dimensionedScalar De = mu_e * Te;     //dimensionedScalar De("De", dimArea/dimTime, 0.01);
-dimensionedScalar DN2p = mu_N2p * Te; //dimensionedScalar DN2p("DN2p", dimArea/dimTime, 0.0001);
+// dimensionedScalar De = mu_e * Te;  dimensionedScalar De("De", dimArea/dimTime, 0.01);
+volScalarField De
+(
+    IOobject ( "De", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    mu_e * Te
+);
 
-if (Pstream::master()) Info << "De = " << De << nl
-     << "DN2p = " << DN2p << nl;
+// dimensionedScalar DN2p = mu_N2p * Te; //dimensionedScalar DN2p("DN2p", dimArea/dimTime, 0.0001);
+volScalarField DN2p
+(
+    IOobject ( "DN2p", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    mu_N2p * Te
+);
 
 // calculate particle fluxes
 volVectorField GammaE

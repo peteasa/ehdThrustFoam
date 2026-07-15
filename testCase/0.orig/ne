@@ -124,16 +124,19 @@ boundaryField
 
         const dictionary& physical =
             db().lookupObject<IOdictionary>("physicalProperties");
-
-        dimensionedScalar mu_e_dim(physical.lookup("mu_e"));
-        dimensionedScalar mu_i_dim(physical.lookup("mu_N2p"));
         dimensionedScalar Te_dim(physical.lookup("Te"));
 
-        const scalar mu_e = mu_e_dim.value();
-        const scalar mu_i = mu_i_dim.value();
-        const scalar Te = Te_dim.value();
+        tmp<scalarField> tmu_eInternal =
+            p.lookupPatchField<volScalarField, scalar>("mu_e").patchInternalField();
+        const scalarField& mu_eInternal = tmu_eInternal();
 
-        const scalar De = mu_e * Te;
+        tmp<scalarField> tmu_N2pInternal =
+            p.lookupPatchField<volScalarField, scalar>("mu_N2p").patchInternalField();
+        const scalarField& mu_N2pInternal = tmu_N2pInternal();
+
+        tmp<scalarField> tDeInternal =
+            p.lookupPatchField<volScalarField, scalar>("De").patchInternalField();
+        const scalarField& DeInternal = tDeInternal();
 
         // emission coefficient 0.01 – 0.2 air discharges
         dimensionedScalar gamma_dim(physical.lookup("gamma"));
@@ -148,6 +151,10 @@ boundaryField
         {
             scalar ne = neInternal[i];
             scalar before = ne;
+
+            scalar mu_e = mu_eInternal[i];
+            scalar mu_i = mu_N2pInternal[i];
+            scalar De = DeInternal[i];
 
             scalar current = this->operator[](i);
             scalar currentGrad = (ne - this->operator[](i)) * patch().deltaCoeffs()[i];
