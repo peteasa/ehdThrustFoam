@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
     {
         // create initial conditions only if starting from time zero!
         scalar sheathThickness = 200e-6;
-        scalar initNe = 1e9;
+        scalar initNe = 1e2;
         scalar initNN2p = 1e9;
         #include "initDensity.H"
     }
@@ -142,10 +142,10 @@ int main(int argc, char *argv[])
     // if ne min/max ratio exceeds -0.9 then the simulation is very likely to terminate early
     // suggest: between -0.9 -> -0.1
     // to disable use high negative value
-    scalar ratioHThr = -2e-2;
+    scalar ratioHThr = -2e-1;
     // clamp the density min value: suggest -0.01
     // to disable use high negative value
-    scalar ratioThr = -2e-4;
+    scalar ratioThr = -2e-3;
     // hysteresis value allows the system to recover from a clamping event
     // suggest: ratioThr / 100
     scalar recoveryRatio = ratioThr / 100;
