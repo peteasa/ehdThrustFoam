@@ -14,8 +14,8 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-// simulationType RAS;
-simulationType laminar;
+simulationType RAS;
+// simulationType laminar;
 laminar
 {
     model           Stokes;

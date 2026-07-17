@@ -16,7 +16,7 @@ if (startupT)
 {
     if (1 && (runTime.value() < startupT))
     {
-        if (enableDetailedLogs && Pstream::master()) Info << "Slow Start: Separate electrostatic interaction @ time: " << runTime.name() << nl;
+        if (enableDetailedLogs && Pstream::master()) Info << "Slow Start: Separate electrostatic interaction until time: " << startupT << nl;
         FEHD = dimensionedVector("zv", FEHD.dimensions(), vector::zero);
         interactionStart = runTime.timeIndex();
     }

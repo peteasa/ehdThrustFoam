@@ -40,23 +40,23 @@ boundaryField
     PELEMENT
     {
         // for spallart allmaras
-        type            nutUSpaldingWallFunction;
-        value           uniform 0;
+        //type            nutUSpaldingWallFunction;
+        //value           uniform 0;
 
         // for k-omega and k-epsilon
-        //type            nutkWallFunction;
-        //value uniform 1e-5;
+        type            nutkWallFunction;
+        value uniform 1e-5;
     }
 
     NELEMENT
     {
         // for spallart allmaras
-        type            nutUSpaldingWallFunction;
-        value           uniform 0;
+        //type            nutUSpaldingWallFunction;
+        //value           uniform 0;
 
         // for k-omega and k-epsilon
-        //type            nutkWallFunction;
-        //value uniform 1e-5;
+        type            nutkWallFunction;
+        value uniform 1e-5;
     }
 
     frontAndBackPlanes

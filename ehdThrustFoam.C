@@ -89,26 +89,26 @@ int main(int argc, char *argv[])
     {
         // create initial conditions only if starting from time zero!
         scalar sheathThickness = 200e-6;
-        scalar initNe = 1e11;
-        scalar initNN2p = 1e11;
+        scalar initNe = 1e9;
+        scalar initNN2p = 1e9;
         #include "initDensity.H"
     }
 
     // arbitary non-zero startup values
-    scalar minNeLimI = 1.0e-2;
-    scalar minN2LimI = 1.0e-2;
+    scalar minNeLimI = 1e-3;
+    scalar minN2LimI = 1e-3;
     scalar minNeLim = minNeLimI;
     scalar minN2Lim = minN2LimI;
 
     // depending on the environment
     scalar factMulti = 5.0;
-    int pwr = -8;
+    int pwr = 9;
     scalar factor = factMulti * pow(10.0, pwr);
     bool factorChange = false;
 
     /*************************************************************************/
     // startup time - separate electrostatic and convection interaction
-    scalar startupT = 5.06e-7;
+    scalar startupT = 1.5e-6;
     scalar startupIncrement = 1 / 4e3;
 
     /*************************************************************************/
@@ -116,7 +116,9 @@ int main(int argc, char *argv[])
     // manage changes in maxEeCo:
     // divide factor by 10 if (ecoHyperThresh < maxEeCo) to avoid early termination
     // suggest: between 0.3 -> 1.0
-    scalar ecoHyperThresh = 1.0;
+    scalar ecoHyperInitial = 2.0;
+    scalar ecoHyperRunning = 0.7;
+    scalar ecoHyperThresh = ecoHyperInitial;
     // subtract one from the first none-zero digit of factor if (ecoUpperThresh < maxEeCo)
     // suggest: ecoHyperThresh / 2
     scalar ecoUpperThresh = ecoHyperThresh / 2;
@@ -131,16 +133,19 @@ int main(int argc, char *argv[])
     // monitor the rate of change of maxEeCo:
     // eeCoRateLimit is likely to be exceeded in the cycle after the factor is increased
     // suggest: between 0.5 -> 1.0
-    scalar eeCoRateLimit = 0.8;
+    scalar eeCoRateInitial = 1000.0;
+    scalar eeCoRateRunning = 1.0;
+    scalar eeCoRateLimit = eeCoRateInitial;
+    scalar eeCoRunTime = 6e-7;
 
     // manage changes in density min/max ratios
     // if ne min/max ratio exceeds -0.9 then the simulation is very likely to terminate early
     // suggest: between -0.9 -> -0.1
     // to disable use high negative value
-    scalar ratioHThr = -6e-6;
+    scalar ratioHThr = -2e-2;
     // clamp the density min value: suggest -0.01
     // to disable use high negative value
-    scalar ratioThr = -8e-8;
+    scalar ratioThr = -2e-4;
     // hysteresis value allows the system to recover from a clamping event
     // suggest: ratioThr / 100
     scalar recoveryRatio = ratioThr / 100;
@@ -153,7 +158,7 @@ int main(int argc, char *argv[])
     // to disable use high value
     scalar maxDRhoEDtRateThrInitial = 2e80;
     scalar maxDRhoEDtRateThrRunning = 5e8;
-    scalar maxDRhoEDtRateRunTime = 5.03e-7;
+    scalar maxDRhoEDtRateRunTime = 1.4e-6;
     scalar maxDRhoEDtRateThr = maxDRhoEDtRateThrInitial;
     // when maxDRhoEDtRateDec is 0 any threshold violation will be acted on
     int maxDRhoEDtRateDec = 0;
@@ -178,12 +183,28 @@ int main(int argc, char *argv[])
 
         if (runTime.value() < min(maxDRhoEDtRateRunTime, startupT))
         {
-            if (enableDetailedLogs && Pstream::master()) Info << "Slow Start: using initial maxDRhoEDtRate threshold @ time: " << runTime.name() << nl;
+            if (enableDetailedLogs && Pstream::master()) Info << "Slow Start: using initial maxDRhoEDtRate threshold until time: " << maxDRhoEDtRateRunTime << nl;
             maxDRhoEDtRateThr = maxDRhoEDtRateThrInitial;
         }
         else
         {
             maxDRhoEDtRateThr = maxDRhoEDtRateThrRunning;
+        }
+
+        if (runTime.value() < min(eeCoRunTime, startupT))
+        {
+            if (enableDetailedLogs && Pstream::master()) Info << "Slow Start: using initial eeCoRate until time: " << eeCoRunTime << nl;
+            ecoHyperThresh = ecoHyperInitial;
+            ecoUpperThresh = ecoHyperThresh / 2;
+            ecoLowerThresh = ecoUpperThresh / 10;
+            eeCoRateLimit = eeCoRateInitial;
+        }
+        else
+        {
+            ecoHyperThresh = ecoHyperRunning;
+            ecoUpperThresh = ecoHyperThresh / 2;
+            ecoLowerThresh = ecoUpperThresh / 10;
+            eeCoRateLimit = eeCoRateRunning;
         }
 
         if (1)
@@ -641,8 +662,8 @@ int main(int argc, char *argv[])
                 }
 
                 // recompute HbyA for better stability
-                //HbyA = rAU * UEqn.H();
-                HbyA = constrainHbyA(rAU*UEqn.H(), U, p);
+                // HbyA = rAU * UEqn.H();
+                // HbyA = constrainHbyA(rAU * UEqn.H(), U, p);
                 // adjustPhi(phiHbyA, U, p);
 
                 // correct velocity with updated rAU

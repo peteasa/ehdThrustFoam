@@ -49,15 +49,10 @@ divSchemes
 
     div((nuEff*dev2(T(grad(U))))) Gauss linear;
 
-    div(phi_gas,ne)     bounded Gauss upwind;
+    div(phi_gas,ne)    bounded Gauss upwind;
     div(phi_de,ne)     bounded Gauss upwind;
-    div(phi_gas,nN2p)     bounded Gauss upwind;
+    div(phi_gas,nN2p)  bounded Gauss upwind;
     div(phi_dN2p,nN2p) bounded Gauss upwind;
-    div(phiEFlux_e,ne)     bounded Gauss upwind;
-    div(phiEFlux_N2p,nN2p) bounded Gauss upwind;
-
-    div(interpolate((-mu_e*E)),ne)   Gauss upwind;
-    div(interpolate((mu_N2p*E)),nN2p)   Gauss upwind;
 
     div(Jtotal)      Gauss linear;
 }

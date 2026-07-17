@@ -150,7 +150,6 @@ boundaryField
         forAll(this->patch(), i)
         {
             scalar ne = neInternal[i];
-            scalar before = ne;
 
             scalar mu_e = mu_eInternal[i];
             scalar mu_i = mu_N2pInternal[i];
