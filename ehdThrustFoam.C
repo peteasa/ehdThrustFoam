@@ -95,6 +95,9 @@ int main(int argc, char *argv[])
     }
 
     // arbitary non-zero startup values
+    // if ne collapses during the simulation then make this as small
+    // as possible because at least this charge will be assigned to
+    // every cell in the model whilst correcting for negative densities
     scalar minNeLimI = 1e-3;
     scalar minN2LimI = 1e-3;
     scalar minNeLim = minNeLimI;
@@ -105,6 +108,7 @@ int main(int argc, char *argv[])
     int pwr = 9;
     scalar factor = factMulti * pow(10.0, pwr);
     bool factorChange = false;
+    scalar factorCh_old = factorChange;
 
     /*************************************************************************/
     // startup time - separate electrostatic and convection interaction
@@ -117,7 +121,7 @@ int main(int argc, char *argv[])
     // divide factor by 10 if (ecoHyperThresh < maxEeCo) to avoid early termination
     // suggest: between 0.3 -> 1.0
     scalar ecoHyperInitial = 2.0;
-    scalar ecoHyperRunning = 0.7;
+    scalar ecoHyperRunning = 0.6;
     scalar ecoHyperThresh = ecoHyperInitial;
     // subtract one from the first none-zero digit of factor if (ecoUpperThresh < maxEeCo)
     // suggest: ecoHyperThresh / 2
@@ -142,13 +146,17 @@ int main(int argc, char *argv[])
     // if ne min/max ratio exceeds -0.9 then the simulation is very likely to terminate early
     // suggest: between -0.9 -> -0.1
     // to disable use high negative value
-    scalar ratioHThr = -2e-1;
+    scalar ratioHThr = -5e-1;
     // clamp the density min value: suggest -0.01
     // to disable use high negative value
-    scalar ratioThr = -2e-3;
+    scalar ratioThr = -5e-3;
     // hysteresis value allows the system to recover from a clamping event
     // suggest: ratioThr / 100
-    scalar recoveryRatio = ratioThr / 100;
+    scalar NeTargetMin = max(1e-6, minNeLim);
+    scalar N2TargetMin = max(1e-6, minN2Lim);
+    scalar neRecoveryRatio = ratioThr / 100;
+    scalar N2RecoveryRatio = ratioThr / 100;
+    scalar minRecoveryRatio = ratioThr / 5000;
     scalar minRatioThr = ratioThr;
     // when minRCyDec is 0 any threshold violation will be acted on
     int minRCyDec = 0;
@@ -168,9 +176,9 @@ int main(int argc, char *argv[])
     if (Pstream::master()) Info << "endTime       = " << runTime.endTime().value() << nl;
     if (Pstream::master()) Info << "deltaT        = " << runTime.deltaTValue() << nl;
 
-    // ensure that Poisson Equation is run at appropriate times
-    int intervalCount = 0;
+    // ensure that Poisson Equation is not run too frequently
     int maxInterval = 12;
+    int intervalCount = maxInterval - 1;
     scalar PPhiE_old = 0;
     while (runTime.loop())
     {
@@ -238,10 +246,19 @@ int main(int argc, char *argv[])
         {
             // Experimental
             scalar minRatioThrOld = minRatioThr;
+
+            NeTargetMin = min(max(1e-6, minNeLim), maxNe);
+            N2TargetMin = min(max(1e-6, minN2Lim), maxN2);
+            neRecoveryRatio = min(minRecoveryRatio,
+                                  NeTargetMin / maxNe - (NeTargetMin / maxNe - ratioThr) / 100);
+            N2RecoveryRatio = min(minRecoveryRatio,
+                                  N2TargetMin / maxN2 - (N2TargetMin / maxN2 - ratioThr) / 100);
+
             // hysteresis for density correction recoveryRatio -> minRatioThr
             // This is an experiment to reduce negative densities
-            minRatioThr = ( recoveryRatio < (minNe / maxNe)
-                            && recoveryRatio < (minN2 / maxN2) ) ? ratioThr : minRatioThr;
+            minRatioThr = ( !factorCh_old
+                            && neRecoveryRatio < (minNe / maxNe)
+                            && N2RecoveryRatio < (minN2 / maxN2)) ? ratioThr : minRatioThr;
             if ( ratioThr == minRatioThr )
             {
                 minRCyDec = ( (minNe / maxNe) < minRatioThr
@@ -249,8 +266,8 @@ int main(int argc, char *argv[])
             }
             else
             {
-                minRCyDec = ( (minNe / maxNe) < recoveryRatio
-                              || (minN2 / maxN2) < recoveryRatio ) ? minRCyDec - 1 : 0;
+                minRCyDec = ( (minNe / maxNe) < neRecoveryRatio
+                              || (minN2 / maxN2) < N2RecoveryRatio ) ? minRCyDec - 1 : 0;
             }
 
             if (minRatioThrOld != minRatioThr && ratioThr == minRatioThr && Pstream::master())
@@ -298,13 +315,13 @@ int main(int argc, char *argv[])
                 // balance the minimum charge: nN2p - ne = 0
                 if (enableDetailedLogs && 0 < maxNe && Pstream::master()) Info << "before clamp min/max ne: " << minNe << " " << maxNe
                                                                                << " min/max: " << minNe / maxNe
-                                                                               << " minNeLim: " << minNeLim << nl;
+                                                                               << " neRecRatio: " << neRecoveryRatio << nl;
                 dimensionedScalar minNeLimD("minNeLimD", ne.dimensions(), minNeLim);
                 ne = 0.5 * (ne + sqrt(sqr(ne) + sqr(minNeLimD)));
 
                 if (enableDetailedLogs && 0 < maxN2 && Pstream::master()) Info << "before clamp min/max nN2p: " << minN2 << " " << maxN2
                                                                                << " min/max: " << minN2 / maxN2
-                                                                               << " minN2Lim: " << minN2Lim << nl;
+                                                                               << " N2RecRatio: " << N2RecoveryRatio << nl;
                 dimensionedScalar minN2LimD("minN2LimD", ne.dimensions(), minN2Lim);
                 nN2p = 0.5 * (nN2p + sqrt(sqr(nN2p) + sqr(minN2LimD)));
 
@@ -314,8 +331,8 @@ int main(int argc, char *argv[])
                 if (0 < maxNe && 0 < maxN2)
                 {
                     // restart density hysteresis count
-                    minRCyDec = ( (minNe / maxNe) < recoveryRatio
-                                  || (minN2 / maxN2) < recoveryRatio ) ? 3000 : 0;
+                    minRCyDec = ( (minNe / maxNe) < neRecoveryRatio
+                                  || (minN2 / maxN2) < N2RecoveryRatio ) ? 3000 : 0;
                 }
 
                 // restart rapid change count
@@ -370,7 +387,7 @@ int main(int argc, char *argv[])
             if (1) {
                 #include "calcReactionRate.H"
                 scalar eeCoRate = (maxEeCo - maxEeCo_old) / maxEeCo_old;
-                scalar factorCh_old = factorChange;
+                factorCh_old = factorChange;
                 factorChange = false;
 
                 if (factorCh_old && ecoUpperThresh < maxEeCo && eeCoRateLimit < eeCoRate)
@@ -448,7 +465,9 @@ int main(int argc, char *argv[])
 
                     if (intervalCount % maxInterval) intervalCount++;
                 }
-                else if ((maxDRhoEDtRate < maxDRhoEDtRateThr)
+                else if (( minRatioThr < (minNe / maxNe)
+                         && minRatioThr < (minN2 / maxN2) )
+                         && (maxDRhoEDtRate < maxDRhoEDtRateThr)
                          && minRCyDec == 0
                          && maxDRhoEDtRateDec == 0
                          && maxEeCo < ecoLowerThresh)
@@ -462,6 +481,9 @@ int main(int argc, char *argv[])
 
                     factor = factMulti * pow(10.0, pwr);
                     factorChange = true;
+
+                    if ( neRecoveryRatio < (minNe / maxNe)
+                         && N2RecoveryRatio < (minN2 / maxN2) ) intervalCount = maxInterval - 1;
                 }
                 else if ( (maxDRhoEDtRateDec < 990)
                           && maxDRhoEDtRateThr < maxDRhoEDtRate
@@ -515,6 +537,8 @@ int main(int argc, char *argv[])
                     Info << runTime.timeIndex() << ": THRESH extreamly high maxEeCo: " << maxEeCo << nl;
                 else if (1 && enableDetailedLogs && (ecoUpperThresh < maxEeCo) && Pstream::master())
                     Info << runTime.timeIndex() << ": THRESH very high maxEeCo: " << maxEeCo << nl;
+                else if (1 && enableDetailedLogs && (ecoLowerThresh < maxEeCo) && Pstream::master())
+                    Info << runTime.timeIndex() << ": THRESH high maxEeCo: " << maxEeCo << nl;
                 if (enableDetailedLogs && 0 < maxNe && (minNe / maxNe) < ratioHThr && Pstream::master())
                     Info << runTime.timeIndex() << ": THRESH high min/max ne: " << minNe / maxNe << nl;
                 if (enableDetailedLogs && 0 < maxN2 && (minN2 / maxN2) < ratioHThr && Pstream::master())
