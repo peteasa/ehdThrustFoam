@@ -143,21 +143,30 @@ int main(int argc, char *argv[])
     scalar eeCoRunTime = 6e-7;
 
     // manage changes in density min/max ratios
-    // if ne min/max ratio exceeds -0.9 then the simulation is very likely to terminate early
-    // suggest: between -0.9 -> -0.1
-    // to disable use high negative value
-    scalar ratioHThr = -5e-1;
-    // clamp the density min value: suggest -0.01
-    // to disable use high negative value
-    scalar ratioThr = -5e-3;
     // hysteresis value allows the system to recover from a clamping event
-    // suggest: ratioThr / 100
+    // to disable use high negative value
+    const scalar recoveryRatio = -5e-7;
+    // limit the dynamic recoveryRatio to negative numbers
+    const scalar limRecoveryRatio = recoveryRatio / 50;
     scalar NeTargetMin = max(1e-6, minNeLim);
     scalar N2TargetMin = max(1e-6, minN2Lim);
-    scalar neRecoveryRatio = ratioThr / 100;
-    scalar N2RecoveryRatio = ratioThr / 100;
-    scalar minRecoveryRatio = ratioThr / 5000;
-    scalar minRatioThr = ratioThr;
+    // initial the dynamic recoveryRatio values
+    scalar neRecoveryRatio = recoveryRatio;
+    scalar N2RecoveryRatio = recoveryRatio;
+    // clamp the density min value
+    const scalar densityMulti = 100;
+    const scalar ratioThr = recoveryRatio * densityMulti;
+    scalar denRatioThr = ratioThr;
+    // initial the dynamic ratioThr values
+    scalar neRatioThr = ratioThr;
+    scalar N2RatioThr = ratioThr;
+
+    // if ne min/max ratio exceeds say -1.0 then the simulation is very likely to terminate early
+    // initial the dynamic high negative ratio threshold values
+    const scalar densityMultiHigh = 10000;
+    scalar neRatioHThr = recoveryRatio * densityMultiHigh;
+    scalar N2RatioHThr = recoveryRatio * densityMultiHigh;
+
     // when minRCyDec is 0 any threshold violation will be acted on
     int minRCyDec = 0;
 
@@ -175,6 +184,9 @@ int main(int argc, char *argv[])
     if (Pstream::master()) Info << "currentTime   = " << runTime.name() << nl;
     if (Pstream::master()) Info << "endTime       = " << runTime.endTime().value() << nl;
     if (Pstream::master()) Info << "deltaT        = " << runTime.deltaTValue() << nl;
+    if (Pstream::master()) Info << "negative density recoveryRatio: " << recoveryRatio
+                                << " ratioThr: " << ratioThr
+                                << " RatioHThr: " << neRatioHThr << nl;
 
     // ensure that Poisson Equation is not run too frequently
     int maxInterval = 12;
@@ -223,7 +235,9 @@ int main(int argc, char *argv[])
             {
                 if (Pstream::master()) Info << "PPhiE: " << PPhiE << " PPhiE - PPhiE_old: " << PPhiE - PPhiE_old << nl;
                 intervalCount = 0;
-                minRatioThr = ratioThr;
+                denRatioThr = ratioThr;
+                neRatioThr = neRecoveryRatio * densityMulti;
+                N2RatioThr = N2RecoveryRatio * densityMulti;
                 enableDetailedLogs = true;
             }
 
@@ -245,41 +259,60 @@ int main(int argc, char *argv[])
         if (0 < maxNe && 0 < maxN2)
         {
             // Experimental
-            scalar minRatioThrOld = minRatioThr;
+            scalar denRatioThrOld = denRatioThr;
 
             NeTargetMin = min(max(1e-6, minNeLim), maxNe);
             N2TargetMin = min(max(1e-6, minN2Lim), maxN2);
-            neRecoveryRatio = min(minRecoveryRatio,
-                                  NeTargetMin / maxNe - (NeTargetMin / maxNe - ratioThr) / 100);
-            N2RecoveryRatio = min(minRecoveryRatio,
-                                  N2TargetMin / maxN2 - (N2TargetMin / maxN2 - ratioThr) / 100);
+            neRecoveryRatio = min(limRecoveryRatio,
+                                  NeTargetMin / maxNe - (NeTargetMin / maxNe - ratioThr) / densityMulti);
+            N2RecoveryRatio = min(limRecoveryRatio,
+                                  N2TargetMin / maxN2 - (N2TargetMin / maxN2 - ratioThr) / densityMulti);
 
-            // hysteresis for density correction recoveryRatio -> minRatioThr
+            neRatioHThr = neRecoveryRatio * densityMultiHigh;
+            N2RatioHThr = N2RecoveryRatio * densityMultiHigh;
+
+            // hysteresis for density correction recoveryRatio -> denRatioThr
             // This is an experiment to reduce negative densities
-            minRatioThr = ( !factorCh_old
+            denRatioThr = ( !factorCh_old
                             && neRecoveryRatio < (minNe / maxNe)
-                            && N2RecoveryRatio < (minN2 / maxN2)) ? ratioThr : minRatioThr;
-            if ( ratioThr == minRatioThr )
+                            && N2RecoveryRatio < (minN2 / maxN2)) ? ratioThr : denRatioThr;
+            if ( ratioThr == denRatioThr )
             {
-                minRCyDec = ( (minNe / maxNe) < minRatioThr
-                             || (minN2 / maxN2) < minRatioThr ) ? minRCyDec - 1 : 0;
+                neRatioThr = neRecoveryRatio * densityMulti;
+                N2RatioThr = N2RecoveryRatio * densityMulti;
+
+                minRCyDec = ( (minNe / maxNe) < neRatioThr
+                             || (minN2 / maxN2) < N2RatioThr ) ? minRCyDec - 1 : 0;
+
+                if (Pstream::master() && (neRatioThr < neRatioHThr
+                                          || N2RatioThr < N2RatioHThr)) Info << "ERROR: neRatioHThr: " << neRatioHThr
+                                            << " neRatioThr: " << neRatioThr
+                                            << " N2RatioHThr: " << N2RatioHThr
+                                            << " N2RatioThr: " << N2RatioThr
+                                            << nl;
             }
             else
             {
                 minRCyDec = ( (minNe / maxNe) < neRecoveryRatio
                               || (minN2 / maxN2) < N2RecoveryRatio ) ? minRCyDec - 1 : 0;
+
+                neRatioThr = denRatioThr;
+                N2RatioThr = denRatioThr;
             }
 
-            if (minRatioThrOld != minRatioThr && ratioThr == minRatioThr && Pstream::master())
-                Info << runTime.timeIndex() << ": re-arm trigger min/max ne: " << minNe / maxNe << " nN2p: " << minN2 / maxN2
+            if (denRatioThrOld != denRatioThr && ratioThr == denRatioThr && Pstream::master())
+                Info << runTime.timeIndex() << ": re-arm trigger min/max ne: " << minNe / maxNe
+                     << " nN2p: " << minN2 / maxN2
                      << nl;
 
             // strong clamping
-            bool clampnow = ( (minNe / maxNe) < ratioHThr
-                || (minN2 / maxN2) < ratioHThr );
+            bool clampnow = ( (minNe / maxNe) < neRatioHThr
+                || (minN2 / maxN2) < N2RatioHThr );
             if (clampnow)
             {
-                minRatioThr = ratioThr;
+                denRatioThr = ratioThr;
+                neRatioThr = neRecoveryRatio * densityMulti;
+                N2RatioThr = N2RecoveryRatio * densityMulti;
             }
         }
 
@@ -291,7 +324,9 @@ int main(int argc, char *argv[])
                 maxDRhoEDtRateDec = 0;
 
                 intervalCount = 0;
-                minRatioThr = ratioThr;
+                denRatioThr = ratioThr;
+                neRatioThr = neRecoveryRatio * densityMulti;
+                N2RatioThr = N2RecoveryRatio * densityMulti;
                 enableDetailedLogs = true;
             }
 
@@ -326,7 +361,9 @@ int main(int argc, char *argv[])
                 nN2p = 0.5 * (nN2p + sqrt(sqr(nN2p) + sqr(minN2LimD)));
 
                 // implement hysteresis using an arbitarily large negative number
-                minRatioThr = -VGREAT;
+                denRatioThr = -VGREAT;
+                neRatioThr = denRatioThr;
+                N2RatioThr = denRatioThr;
 
                 if (0 < maxNe && 0 < maxN2)
                 {
@@ -414,8 +451,8 @@ int main(int argc, char *argv[])
                     factor = factMulti * pow(10.0, pwr);
                     factorChange = true;
                 }
-                else if ( minRCyDec && minRCyDec < 2000 && ( (minNe / maxNe) < ratioHThr
-                                                || (minN2 / maxN2) < ratioHThr ) )
+                else if ( minRCyDec && minRCyDec < 2000 && ( (minNe / maxNe) < neRatioHThr
+                                                || (minN2 / maxN2) < N2RatioHThr ) )
                 {
                     factMulti -= 1.0;
                     if (factMulti < 1.0)
@@ -427,12 +464,14 @@ int main(int argc, char *argv[])
                     factor = factMulti * pow(10.0, pwr);
                     factorChange = true;
 
-                    if ((intervalCount % maxInterval) && (minNe / maxNe) < ratioHThr) intervalCount++;
-                    if ((intervalCount % maxInterval) && (minN2 / maxN2) < ratioHThr) intervalCount++;
+                    if ((intervalCount % maxInterval) && (minNe / maxNe) < neRatioHThr) intervalCount++;
+                    if ((intervalCount % maxInterval) && (minN2 / maxN2) < N2RatioHThr) intervalCount++;
 
-                    scalar minRatioThrOld = minRatioThr;
-                    minRatioThr = ratioThr;
-                    if (minRatioThrOld != minRatioThr && Pstream::master())
+                    scalar denRatioThrOld = denRatioThr;
+                    denRatioThr = ratioThr;
+                    neRatioThr = neRecoveryRatio * densityMulti;
+                    N2RatioThr = N2RecoveryRatio * densityMulti;
+                    if (denRatioThrOld != denRatioThr && Pstream::master())
                         Info << runTime.timeIndex() << ": force re-arm trigger min/max ne: " << minNe / maxNe
                              << " nN2p: " << minN2 / maxN2 << nl;
                 }
@@ -465,8 +504,8 @@ int main(int argc, char *argv[])
 
                     if (intervalCount % maxInterval) intervalCount++;
                 }
-                else if (( minRatioThr < (minNe / maxNe)
-                         && minRatioThr < (minN2 / maxN2) )
+                else if (( neRatioThr < (minNe / maxNe)
+                         && N2RatioThr < (minN2 / maxN2) )
                          && (maxDRhoEDtRate < maxDRhoEDtRateThr)
                          && minRCyDec == 0
                          && maxDRhoEDtRateDec == 0
@@ -487,8 +526,8 @@ int main(int argc, char *argv[])
                 }
                 else if ( (maxDRhoEDtRateDec < 990)
                           && maxDRhoEDtRateThr < maxDRhoEDtRate
-                          && ( (minNe / maxNe) < ratioHThr
-                               || (minN2 / maxN2) < ratioHThr ) )
+                          && ( (minNe / maxNe) < neRatioHThr
+                               || (minN2 / maxN2) < N2RatioHThr ) )
                 {
                     if (Pstream::master()) Info << "WARNING: correct for multiple threshold violation!" << nl;
                     pwr -= 1;
@@ -511,16 +550,18 @@ int main(int argc, char *argv[])
                     enableDetailedLogs = true;
 
                     intervalCount = 0;
-                    minRatioThr = ratioThr;
+                    denRatioThr = ratioThr;
+                    neRatioThr = neRecoveryRatio * densityMulti;
+                    N2RatioThr = N2RecoveryRatio * densityMulti;
                     potCorrection = true;
                 }
 
                 if (factorChange)
                 {
                     enableDetailedLogs = true;
-                    if (ratioThr == minRatioThr && 0 < maxNe && 0 < maxN2
-                        && ( (minNe / maxNe) < minRatioThr
-                             || (minN2 / maxN2) < minRatioThr ) )
+                    if (ratioThr == denRatioThr && 0 < maxNe && 0 < maxN2
+                        && ( (minNe / maxNe) < neRatioThr
+                             || (minN2 / maxN2) < N2RatioThr ) )
                     {
                         // Experimental
                         intervalCount = 0;
@@ -528,7 +569,9 @@ int main(int argc, char *argv[])
 
                     if (!(intervalCount % maxInterval))
                     {
-                        minRatioThr = ratioThr;
+                        denRatioThr = ratioThr;
+                        neRatioThr = neRecoveryRatio * densityMulti;
+                        N2RatioThr = N2RecoveryRatio * densityMulti;
                         potCorrection = true;
                     }
                 }
@@ -539,9 +582,9 @@ int main(int argc, char *argv[])
                     Info << runTime.timeIndex() << ": THRESH very high maxEeCo: " << maxEeCo << nl;
                 else if (1 && enableDetailedLogs && (ecoLowerThresh < maxEeCo) && Pstream::master())
                     Info << runTime.timeIndex() << ": THRESH high maxEeCo: " << maxEeCo << nl;
-                if (enableDetailedLogs && 0 < maxNe && (minNe / maxNe) < ratioHThr && Pstream::master())
+                if (enableDetailedLogs && 0 < maxNe && (minNe / maxNe) < neRatioHThr && Pstream::master())
                     Info << runTime.timeIndex() << ": THRESH high min/max ne: " << minNe / maxNe << nl;
-                if (enableDetailedLogs && 0 < maxN2 && (minN2 / maxN2) < ratioHThr && Pstream::master())
+                if (enableDetailedLogs && 0 < maxN2 && (minN2 / maxN2) < N2RatioHThr && Pstream::master())
                     Info << runTime.timeIndex() << ": THRESH high min/max nN2p: " << minN2 / maxN2 << nl;
                 if (enableDetailedLogs && (maxDRhoEDtRateThr < maxDRhoEDtRate) && Pstream::master())
                     Info << runTime.timeIndex() << ": THRESH rapid density changes maxDRhoEDtRate: " << maxDRhoEDtRate << nl;
@@ -553,7 +596,7 @@ int main(int argc, char *argv[])
                          << " mnRCyDec: " << minRCyDec
                          << " mxDRDtRate: " << maxDRhoEDtRate
                          << " mxDRDtRateDec: " << maxDRhoEDtRateDec
-                         << " mnRatioThr: " << minRatioThr << nl;
+                         << " denRatioThr: " << denRatioThr << nl;
                 maxEeCo_old = maxEeCo;
 
                 // Now update the DeltaT value
