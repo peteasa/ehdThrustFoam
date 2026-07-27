@@ -1,3 +1,12 @@
 #!/bin/bash
 
+# if the solver crashes look at for log lines like:
+#                       [ 6] ehdThrustFoam(+0x7ad9a)[0x5ef2c8d0fd9a]
+#                       [ 7] ehdThrustFoam(+0x66088)[0x5ef2c8cfb088]
+#                       ... etc
+# use the following command to find the source code line numbers
+# addr2line -Cfipe $FOAM_USER_APPBIN/ehdThrustFoam 0x7ad9a 0x66088
+# debug symbols enabled with the following compile option:
+export WM_COMPILE_OPTION=Debug
+
 wmake
