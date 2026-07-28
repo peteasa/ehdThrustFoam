@@ -42,15 +42,13 @@ boundaryField
 
     PELEMENT
     {
-        type              kqRWallFunction;
-        value             uniform 1e-3;
-        //value           $internalField;
+        type            kqRWallFunction;
+        value           uniform $kInlet;
     }
     NELEMENT
     {
-        type              kqRWallFunction;
-        value             uniform 1e-3;
-        //value           $internalField;
+        type            kqRWallFunction;
+        value           uniform $kInlet;
     }
 
     frontAndBackPlanes

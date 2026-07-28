@@ -22,7 +22,7 @@ if (enableDetailedLogs)
 
 rAU.correctBoundaryConditions();
 
-volVectorField HbyA = constrainHbyA(rAU*UEqn.H(), U, p);
+volVectorField HbyA = constrainHbyA(rAU * UEqn.H(), U, p);
 surfaceScalarField phiHbyA
 (
     "phiHbyA",

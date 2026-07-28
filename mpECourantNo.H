@@ -2,9 +2,11 @@
     // now calculate the Courant Numbers for e and ions
     surfaceScalarField phiEFlux_e = fvc::flux(-mu_e * E);
     surfaceScalarField phiEFlux_N2p = fvc::flux(mu_N2p * E);
+    surfaceScalarField phiEFlux_O2m = fvc::flux(-mu_O2m * E);
 
     maxEeCo = 0.0;
     scalar maxEpCo = 0.0;
+    scalar maxEmCo = 0.0;
     const scalar dt = runTime.deltaTValue();
 
     forAll(phiEFlux_e, faceI)
@@ -37,9 +39,25 @@
 
     maxEpCo = returnReduce(maxEpCo, maxOp<scalar>());
 
+    forAll(phiEFlux_O2m, faceI)
+    {
+        scalar flux = mag(phiEFlux_O2m[faceI]);
+
+        label own = mesh.owner()[faceI];
+        label nei = mesh.neighbour()[faceI];
+
+        scalar coOwn = flux * dt / mesh.V()[own];
+        scalar coNei = flux * dt / mesh.V()[nei];
+
+        maxEmCo = max(maxEmCo, max(coOwn, coNei));
+    }
+
+    maxEmCo = returnReduce(maxEmCo, maxOp<scalar>());
+
     scalar totalFlux =
         gSum(mag(phiEFlux_e)())
-        + gSum(mag(phiEFlux_N2p)());
+        + gSum(mag(phiEFlux_N2p)())
+        + gSum(mag(phiEFlux_O2m)());
 
     scalar meanECo = (totalFlux * dt) / gSum(mesh.V());
 
@@ -59,6 +77,7 @@
 
         if (Pstream::master()) Info << "Mean drift Courant Number = " << meanECo << nl;
         if (Pstream::master()) Info << "Max drift Courant Numbers: electron: " << maxEeCo
-                                    << " positive ion: " << maxEpCo << nl;
+                                    << " positive ion: " << maxEpCo
+                                    << " negative ion: " << maxEmCo << nl;
     }
 }

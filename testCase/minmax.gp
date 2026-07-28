@@ -54,7 +54,7 @@ plot "postProcessing/0/minMax/minMax.dat" using 1:4 with lines ls 1 axes x1y1 ti
 
 set yrange [*:*]
 
-set title "Time Evolution of ne, nN2p min max values"
+set title "Time Evolution of ne, nN2p, nO2m min max values"
 
 set ylabel "max" offset 0.1
 set logscale y
@@ -66,7 +66,9 @@ set logscale y2
 plot "postProcessing/0/minMax/minMax.dat" using 1:8 with lines ls 1 axes x1y2 title "ne min", \
      "postProcessing/0/minMax/minMax.dat" using 1:9 with lines ls 2 axes x1y1 title "ne max", \
      "postProcessing/0/minMax/minMax.dat" using 1:10 with lines ls 3 axes x1y2 title "nN2p min", \
-     "postProcessing/0/minMax/minMax.dat" using 1:11 with lines ls 4 axes x1y1 title "nN2p max"
+     "postProcessing/0/minMax/minMax.dat" using 1:11 with lines ls 4 axes x1y1 title "nN2p max", \
+     "postProcessing/0/minMax/minMax.dat" using 1:12 with lines ls 5 axes x1y2 title "nO2m min", \
+     "postProcessing/0/minMax/minMax.dat" using 1:13 with lines ls 6 axes x1y1 title "nO2m max"
 
 unset logscale y
 unset logscale y2
@@ -78,9 +80,9 @@ set logscale y
 set y2label "min" offset 0.2
 set logscale y2
 
-plot "postProcessing/0/minMax/minMax.dat" using 1:12 with lines ls 1 axes x1y2 title "phiE min", \
-     "postProcessing/0/minMax/minMax.dat" using 1:13 with lines ls 2 axes x1y1 title "phiE max", \
-     "postProcessing/0/minMax/minMax.dat" using 1:14 with lines ls 3 axes x1y2 title "E min", \
-     "postProcessing/0/minMax/minMax.dat" using 1:15 with lines ls 4 axes x1y1 title "E max"
+plot "postProcessing/0/minMax/minMax.dat" using 1:14 with lines ls 1 axes x1y2 title "phiE min", \
+     "postProcessing/0/minMax/minMax.dat" using 1:15 with lines ls 2 axes x1y1 title "phiE max", \
+     "postProcessing/0/minMax/minMax.dat" using 1:16 with lines ls 3 axes x1y2 title "E min", \
+     "postProcessing/0/minMax/minMax.dat" using 1:17 with lines ls 4 axes x1y1 title "E max"
 
 unset multiplot

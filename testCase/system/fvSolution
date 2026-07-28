@@ -137,6 +137,20 @@ solvers
         relTol          0;
     }
 
+    nO2m
+    {
+        solver          smoothSolver;
+        tolerance       1e-08;
+        relTol          1e-06;
+
+        smoother        symGaussSeidel;
+    }
+
+    nO2mFinal
+    {
+        $ne;
+        relTol          0;
+    }
 }
 
 // timeScheme = steadyState for a steady-state simulation; otherwise transient
@@ -162,7 +176,7 @@ PIMPLE
     {
         p               1e-5;
         U               1e-5;
-        "(phiE|ne|nN2p)" 1e-5;
+        "(phiE|ne|nN2p|nO2m)" 1e-5;
     }
 #endif
 
@@ -202,6 +216,7 @@ relaxationFactors
         U               0.5;
         ne              0.3;
         nN2p            0.3;
+        nO2m            0.3;
         phiE            0.5;
     }
 }

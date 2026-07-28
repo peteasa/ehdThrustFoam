@@ -13,6 +13,13 @@ volScalarField nN2p
     mesh
 );
 
+volScalarField nO2m
+(
+    IOobject("nO2m", runTime.name(), mesh,
+             IOobject::MUST_READ, IOobject::AUTO_WRITE),
+    mesh
+);
+
 volScalarField rhoE
 (
     IOobject
@@ -23,7 +30,7 @@ volScalarField rhoE
         IOobject::NO_READ,
         IOobject::AUTO_WRITE
     ),
-    eCharge * ( nN2p - ne )
+    eCharge * ( nN2p - nO2m - ne )
 );
 
 dimensionedScalar beta
@@ -56,24 +63,39 @@ volScalarField mu_N2p
     mu_N2p0 * (1.0 - beta * xH20) / Peff
 );
 
+dimensionedScalar mu_O2m0
+(
+    physicalProperties.lookup("mu_O2m0")
+);
+
+volScalarField mu_O2m
+(
+    IOobject ( "mu_O2m", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    mu_O2m0 * (1.0 - beta * xH20) / Peff
+);
+
 // 2 eV dimTemperature
 dimensionedScalar Te
 (
     physicalProperties.lookup("Te")
 );
 
-// dimensionedScalar De = mu_e * Te;  dimensionedScalar De("De", dimArea/dimTime, 0.01);
 volScalarField De
 (
     IOobject ( "De", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
     mu_e * Te
 );
 
-// dimensionedScalar DN2p = mu_N2p * Te; //dimensionedScalar DN2p("DN2p", dimArea/dimTime, 0.0001);
 volScalarField DN2p
 (
     IOobject ( "DN2p", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
     mu_N2p * Te
+);
+
+volScalarField DO2m
+(
+    IOobject ( "DO2m", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    mu_O2m * Te
 );
 
 // calculate particle fluxes
@@ -84,7 +106,6 @@ volVectorField GammaE
   - mu_e * E * ne
   - De * fvc::grad(ne)
 );
-//if (Pstream::master()) Info << "GammaE dimensions: " << GammaE.dimensions() << nl;
 
 volVectorField GammaN2p
 (
@@ -93,7 +114,14 @@ volVectorField GammaN2p
   + mu_N2p * E * nN2p
   - DN2p * fvc::grad(nN2p)
 );
-//if (Pstream::master()) Info << "GammaN2p dimensions: " << GammaN2p.dimensions() << nl;
+
+volVectorField GammaO2m
+(
+    IOobject ( "GammaO2m", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    U * nO2m
+  - mu_O2m * E * nO2m
+  - DO2m * fvc::grad(nO2m)
+);
 
 volVectorField Je
 (
@@ -107,6 +135,12 @@ volVectorField JN2p
     eCharge * GammaN2p
 );
 
+volVectorField JO2m
+(
+    IOobject ( "JO2m", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+  - eCharge * GammaO2m
+);
+
 volVectorField J
 (
     IOobject
@@ -117,7 +151,7 @@ volVectorField J
         IOobject::NO_READ,
         IOobject::NO_WRITE
     ),
-    Je + JN2p
+    Je + JN2p + JO2m
 );
 
 dimensionedScalar E0("E0", E.dimensions(), 2.5e6);
@@ -128,16 +162,28 @@ volScalarField magE
     mag(E)
 );
 
-// ionisation - for Townsend ionisation N2 -> N2+ + e-
-// dimless / dimLength
-dimensionedScalar A
+dimensionedScalar kB
 (
-    physicalProperties.lookup("A")
+    "kB",
+    dimEnergy/dimTemperature,
+    1.380649e-23
 );
-// dimVoltage / dimLength
-dimensionedScalar B
+
+// reference temperature for chemical reactions
+dimensionedScalar T0ChemRef
 (
-    physicalProperties.lookup("B")
+    physicalProperties.lookup("T0ChemRef")
+);
+
+// ionisation - for Townsend ionisation N2 -> N2+ + e-
+dimensionedScalar A0
+(
+    physicalProperties.lookup("A0")
+);
+
+dimensionedScalar B0
+(
+    physicalProperties.lookup("B0")
 );
 
 dimensionedScalar smallE("smallE", magE.dimensions(), 1e3);
@@ -145,13 +191,76 @@ volScalarField alpha
 (
     IOobject("alpha", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
-    A * exp(-B / max(magE, smallE))
+    A0 * Peff_safe * exp(-B0 * Peff_safe / max(magE, smallE))
 );
 
-// recombination (kei * ne * nN2p) -> dimless / dimVolume / dimTime for recombination e- + N2+ -> N2
-dimensionedScalar kei
+// attachment e- + O2 + M -> O2- + M
+dimensionedScalar C1
 (
-    physicalProperties.lookup("kei")
+    physicalProperties.lookup("C1")
+);
+
+dimensionedScalar C2
+(
+    physicalProperties.lookup("C2")
+);
+
+dimensionedScalar D
+(
+    physicalProperties.lookup("D")
+);
+
+dimensionedScalar Ad
+(
+    physicalProperties.lookup("Ad")
+);
+
+dimensionedScalar EdTd
+(
+    physicalProperties.lookup("EdTd")
+);
+
+dimensionedScalar Ed
+(
+    EdTd * 1e-21
+);
+
+dimensionedScalar DeltaETd
+(
+    physicalProperties.lookup("DeltaETd")
+);
+
+dimensionedScalar DeltaE
+(
+    DeltaETd * 1e-21
+);
+
+// detachment O2- -> O2 + e-
+dimensionedScalar Adet
+(
+    physicalProperties.lookup("Adet")
+);
+
+dimensionedScalar Eact_eV
+(
+    physicalProperties.lookup("Eact_eV")
+);
+
+// recombination e- + N2+ -> N2
+dimensionedScalar kei0
+(
+    physicalProperties.lookup("kei0")
+);
+
+// for recombination N2+ + O2- -> N2 + O2
+dimensionedScalar kii0
+(
+    physicalProperties.lookup("kii0")
+);
+
+dimensionedScalar humidityCorrection
+(
+    physicalProperties.lookup("humidityCorrection")
 );
 
 dimensionedScalar ionScale("ionScale", dimless, 1e-1);        // 1e-4
@@ -162,18 +271,81 @@ volScalarField Sion
     ionScale * alpha * mu_e * magE * ne
 );
 
+volScalarField eta3b
+(
+    IOobject("eta3b", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    (C1 + C2 * xH20) * sqr(Peff_safe) * exp( -D * Peff_safe / max(magE, smallE))
+);
+
+volScalarField eta2b
+(
+    IOobject("eta2b", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    Ad * exp( - pow( ( magE * kB * T0TransRef / Peff_safe - Ed ) / DeltaE , 2) )
+);
+
+volScalarField eta
+(
+    IOobject("eta", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    eta3b + eta2b
+);
+
+volScalarField SO2ion
+(
+    IOobject("SO2ion", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    eta * mu_e * magE * ne
+);
+
+volScalarField nuDet
+(
+    IOobject("nuDet", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    Adet * Peff * exp(-Eact_eV * eCharge.value() / (kB * T))
+);
+
+volScalarField SO2e
+(
+    IOobject("SO2e", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    nuDet * nO2m
+);
+
+volScalarField keiLocal
+(
+    IOobject("keiLocal", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    kei0 * pow(T0ChemRef / T, 0.5) * (Pphys / P0TransRef)
+);
+
 volScalarField Rei
 (
     IOobject("Rei", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
-    kei * ne * nN2p
+    keiLocal * ne * nN2p
 );
 
-volScalarField reactionRate
+volScalarField kiiLocal
 (
-    IOobject("reactionRate", runTime.name(), mesh,
+    IOobject("kiiLocal", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
-    Sion + Rei
+    kii0 * ( T0ChemRef / T ) * ( 1.0 + humidityCorrection * xH20 )
+);
+
+volScalarField Rii
+(
+    IOobject("Rii", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    kiiLocal * nN2p * nO2m
+);
+
+volScalarField chemReactionRate
+(
+    IOobject("chemReactionRate", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    mag(Sion) + mag(SO2ion) + mag(SO2e) + mag(Rei) + mag(Rii)
 );
 
 scalar maxReactionRate = 0;

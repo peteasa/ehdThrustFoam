@@ -29,9 +29,16 @@ Pr              Pr       [ 0 0 0 0 0 0 0 ] 0.71;
 // turbulent Prandtl number for air
 Prt             Prt      [ 0 0 0 0 0 0 0 ] 0.85;
 
-Pref            Pref     [ 1 -1 -2 0 0 0 0 ]  89875;
+// represents the ambient pressure
+// the associated ambient temperature for this height is set in 0.orig/T
+Pamb            Pamb     [ 1 -1 -2 0 0 0 0 ]  89875;
 
 RH              RH       [ 0 0 0 0 0 0 0 ]    0.5;
+
+// reference temperature and pressure for transport related measured constants
+// mu_*, A0, B0, C1, C2, D
+P0TransRef      P0TransRef [ 1 -1 -2 0 0 0 0 ] 101325.0; // 1 atmosphere
+T0TransRef      T0TransRef [0 0 0 1 0 0 0]     288.15;   // 15 degrees C :- 273.15 = 0 degrees C
 
 // mobility - dimArea / dimVoltage / dimTime
 mu_e0           mu_e0    [ 0 -1 0 0 0 1 0 ] 437.43;   // 437.43 (:-> D 0.01) old 5e-3(:->D 0.01)
@@ -40,22 +47,48 @@ mu_O2m0         mu_O2m0  [ 0 -1 0 0 0 1 0 ] 2.625;    // 2.625 (:-> D 6e-05) old
 
 beta            beta     [ 0 0 0 0 0 0 0 ] 0.6;     // 0.5 -> 0.8
 
-// ionisation - for Townsend ionisation
-// dimless / dimLength
-A               A        [ 0 -1 0 0 0 0 0 ] 1e5;    // ~ air 1e5
-// dimVoltage / dimLength
-B               B        [ 1 1 -3 0 0 -1 0 ] 6e6;   // ~ air 3e7
+// reference temperature for ionisation, attachment, detachment and recombination constants
+T0ChemRef   T0ChemRef [0 0 0 1 0 0 0] 300.0;   // 26.85 degrees C
 
-// emission coefficient (for boundary condition)
+// ionisation - for Townsend ionisation
+A0              A0       [-1 0 2 0 0 0 0 ] 11.3;    // ~ air 1e5
+B0              B0       [ 0 2 -1 0 0 -1 0 ] 274;   // ~ air 3e7
+
+// emission coefficient (increases ne secondary emission on the boundary)
 gamma           gamma    [ 0 0 0 0 0 0 0 ] 0.1;    // 0.01 – 0.2 air discharges
 
 // for Diffusion coefficients - dimTemperature
 Te              Te       [ 1 2 -3 0 0 -1 0 ] 2.0;   // 2 eV
 
-// for Scharfetter - Gummel flux - dimEnergy/dimTemperature
-kB              kB       [ 1 2 -2 -1 0 0 0 ] 1.380649e-23;
+// attachment e- + O2 -> O2-
+// baseline three-body attachment coefficient for dry air
+C1          C1      [-2 1 4 0 0 0 0] 1.2e-5;
+// high-efficiency stabilization provided by H2​O
+C2          C2      [-2 1 4 0 0 0 0] 1.8e-3;
+// characteristic reduced electric field threshold for electron attachment
+D           D       [0 2 -1 0 0 -1 0] 1.5e3;
 
-// recombination (kei * ne * nN2p) -> dimless / dimVolume / dimTime for recombination e- + N2+ -> N2
-kei             kei      [ 0 3 -1 0 0 0 0 ] 2e-12;  // 1e-13 -> 1e-12
+// two-body attachment coefficients for dry air
+// peak attachment coefficient
+Ad            Ad        [0 -1 0 0 0 0 0] 200;
+// reduced field where dissociative attachment is strongest
+EdTd          EdTd      [1 4 -3 0 0 -1 0] 165;
+// width of peak
+DeltaETd      DeltaETd  [1 4 -3 0 0 -1 0] 70;
+
+// detachment O2- -> O2 + e-
+// frequency factor
+Adet        Adet    [-1 1 1 0 0 0 0] 8e4;
+// activation energy (electron affinity) required to strip the electron from O2- ion
+Eact_eV        Eact_eV    [1 2 -2 0 0 0 0] 0.43;  // 0.43 -> 0.45 eV but 0.18 is also possible!
+
+// recombination e- + N2+ -> N2
+//  value measured at T0ChemRef = 300
+kei0        kei0    [0 3 -1 0 0 0 0] 2e-12;
+
+// for recombination N2+ + O2- -> N2 + O2
+humidityCorrection   humidityCorrection  [0 0 0 0 0 0 0] 2.5;
+//  values measured at T0ChemRef = 300
+kii0        kii0    [0 3 -1 0 0 0 0] 1e-12;
 
 // ************************************************************************* //

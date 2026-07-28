@@ -1,5 +1,15 @@
 This an OpenFOAM-13 custom solver for electrohydrodynamic (EHD) ionic wind thrust simulation using coupled Navier-Stokes and charge transport.  The validation case is inspired by Haofeng Xu, Yiou He, Kieran L. Strobel, Christopher K. Gilmore, Sean P. Kelley, Cooper C. Hennick, Thomas Sebastian, Mark R. Woolston, David J. Perreault & Steven R. H. Barrett "Flight of an aeroplane with solid-state propulsion" https://www.nature.com/articles/s41586-018-0707-9.  Read the documentation for this custom solver [here](https://paracpg.gitlab.io/wikis/cfdpages.html).
 
+## Features
+
+- incompressible solver modelling temperature and pressure
+- Electrostatic body forces
+- multiple charged species
+- temperature and pressure dependent mobility and diffusion coefficients
+- Navier - Stokes transport
+- turbulent flow
+- parallel execution
+
 ## Instructions
 
 One time per session activities

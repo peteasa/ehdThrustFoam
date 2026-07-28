@@ -42,11 +42,6 @@ volScalarField p
     mesh
 );
 
-dimensionedScalar Pref
-(
-    physicalProperties.lookup("Pref")
-);
-
 const dictionary& pDict = mesh.solution().subDict("solvers").subDict("p");
 label pRefCell = pDict.lookupOrDefault<label>("referenceCell", 0);
 scalar pRefValue = pDict.lookupOrDefault<scalar>("referenceValue", 0.0);
@@ -100,23 +95,39 @@ volScalarField T
     mesh
 );
 
+// represents the ambient pressure
+dimensionedScalar Pamb
+(
+    physicalProperties.lookup("Pamb")
+);
+
 volScalarField Pphys
 (
     IOobject ( "Pphys", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
-    Pref + rho * p
+    Pamb + rho * p
 );
 
-dimensionedScalar TC0ref
+dimensionedScalar T0TransRef
 (
-    "TC0ref",
-    dimTemperature,
-    273.15
+    physicalProperties.lookup("T0TransRef")
+);
+
+dimensionedScalar P0TransRef
+(
+    physicalProperties.lookup("P0TransRef")
 );
 
 volScalarField Peff
 (
     IOobject ( "Peff", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
-    Pphys * ( TC0ref / T )
+    Pphys * ( T0TransRef / T )
+);
+
+dimensionedScalar smallP("smallP", Peff.dimensions(), 1e-3);
+volScalarField Peff_safe
+(
+    IOobject ( "Peff", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    max(Peff, smallP)
 );
 
 dimensionedScalar Psearef
@@ -126,11 +137,18 @@ dimensionedScalar Psearef
     101325.0
 );
 
+dimensionedScalar Tsearef
+(
+    "Tsearef",
+    T.dimensions(),
+    288.15
+);
+
 // relative air density
 volScalarField delta
 (
     IOobject ( "delta", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
-    ( Pphys / Psearef ) * ( TC0ref / T )
+    ( Pphys / P0TransRef ) * ( T0TransRef / T )
 );
 
 // Manage a gradual change in the electrostatic and convection interactions
@@ -215,6 +233,7 @@ dimensionedScalar Prt
     physicalProperties.lookup("Prt")
 );
 
+// Tetens or Arden Buck equation
 dimensionedScalar Tzero
 (
     "Tzero",
