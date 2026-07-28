@@ -1,12 +1,15 @@
-This an OpenFOAM-13 custom solver for electrohydrodynamic (EHD) ionic wind thrust simulation using coupled Navier-Stokes and charge transport.  The validation case is inspired by Haofeng Xu, Yiou He, Kieran L. Strobel, Christopher K. Gilmore, Sean P. Kelley, Cooper C. Hennick, Thomas Sebastian, Mark R. Woolston, David J. Perreault & Steven R. H. Barrett "Flight of an aeroplane with solid-state propulsion" https://www.nature.com/articles/s41586-018-0707-9.  Read the documentation for this custom solver [here](https://paracpg.gitlab.io/wikis/cfdpages.html).
+This an OpenFOAM-13 custom solver for electrohydrodynamic (EHD) ionic wind thrust simulation using coupled Navier-Stokes and charge transport.  The validation case is inspired by Haofeng Xu et al. "Flight of an aeroplane with solid-state propulsion" https://www.nature.com/articles/s41586-018-0707-9.  Read the documentation for this custom solver [here](https://paracpg.gitlab.io/wikis/cfdpages.html).
 
 ## Features
 
-- incompressible solver modelling temperature and pressure
+- simulates corona discharge thrust generation
+- target application is for electrohydrodynamic propulsion devices
+- custom incompressible solver also modelling temperature and physical pressure
 - Electrostatic body forces
 - multiple charged species
+- coupled drift-diffusion charge transport
 - temperature and pressure dependent mobility and diffusion coefficients
-- Navier - Stokes transport
+- body-force coupling to Navier - Stokes transport
 - turbulent flow
 - parallel execution
 
@@ -31,9 +34,16 @@ View the results with paraFoam (see [OpenFOAM user guide](https://doc.cfd.direct
 
 Once complete you can stop and restart the simulation, or re-run with different parameters set, all without changing the model.
 
-## Please provide feedback
+## Actively seaking collaboration and or feedback!
 
 You are welcome to provide feedback by responding to an existing issue or creating a new issue on the [issue board](https://gitlab.com/paracpg/ehdthrustfoam/-/boards).
+
+I invite you to help
+
+- extend the multi species equations adding additional plasma chemistry
+- create new models for verification
+- develop an equivalent compressible solver
+- review and improve my documentation for the plasma physics
 
 ## Installation
 
