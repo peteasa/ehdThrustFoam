@@ -78,7 +78,6 @@ boundaryField
         forAll(this->patch(), i)
         {
             scalar nN2 = nN2Internal[i];
-            scalar before = nN2;
 
             scalar current = this->operator[](i);
             scalar currentGrad = (nN2 - this->operator[](i)) * patch().deltaCoeffs()[i];

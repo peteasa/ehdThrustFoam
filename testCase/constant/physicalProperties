@@ -83,12 +83,12 @@ Adet        Adet    [-1 1 1 0 0 0 0] 8e4;
 Eact_eV        Eact_eV    [1 2 -2 0 0 0 0] 0.43;  // 0.43 -> 0.45 eV but 0.18 is also possible!
 
 // recombination e- + N2+ -> N2
-//  value measured at T0ChemRef = 300
+// value measured at T0ChemRef = 300
 kei0        kei0    [0 3 -1 0 0 0 0] 2e-12;
 
 // for recombination N2+ + O2- -> N2 + O2
 humidityCorrection   humidityCorrection  [0 0 0 0 0 0 0] 2.5;
-//  values measured at T0ChemRef = 300
+// value measured at T0ChemRef = 300
 kii0        kii0    [0 3 -1 0 0 0 0] 1e-12;
 
 // ************************************************************************* //

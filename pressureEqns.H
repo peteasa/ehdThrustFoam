@@ -1,9 +1,5 @@
 
-volScalarField rAU
-(
-    "rAU",
-    1.0 / ( UEqn.A().ref() + dimensionedScalar("deltaA", UEqn.A().ref().dimensions(), 1e-12 ) )
-);
+rAU = 1.0 / ( UEqn.A().ref() + dimensionedScalar("deltaA", UEqn.A().ref().dimensions(), 1e-12 ) );
 
 if (enableDetailedLogs)
 {

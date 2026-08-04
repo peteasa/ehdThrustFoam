@@ -176,6 +176,7 @@ PIMPLE
     {
         p               1e-5;
         U               1e-5;
+        "(k|omega|epsilon)" 1e-5;
         "(phiE|ne|nN2p|nO2m)" 1e-5;
     }
 #endif

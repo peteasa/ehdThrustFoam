@@ -69,7 +69,6 @@ boundaryField
         forAll(this->patch(), i)
         {
             scalar ne = neInternal[i];
-            scalar before = ne;
 
             scalar current = this->operator[](i);
             scalar currentGrad = (ne - this->operator[](i)) * patch().deltaCoeffs()[i];

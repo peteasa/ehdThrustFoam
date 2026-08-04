@@ -62,6 +62,14 @@ volVectorField U
     mesh
 );
 
+volScalarField rAU
+(
+    IOobject("rAU", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    mesh,
+    dimensionedScalar("rAU", dimTime, 0.0)
+);
+
 dimensionedScalar rho
 (
     physicalProperties.lookup("rho")

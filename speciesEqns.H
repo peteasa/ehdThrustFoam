@@ -144,6 +144,7 @@ if (0)
 // update the reference values
 ne.correctBoundaryConditions();
 nN2p.correctBoundaryConditions();
+nO2m.correctBoundaryConditions();
 
 if (enableDetailedLogs)
 {

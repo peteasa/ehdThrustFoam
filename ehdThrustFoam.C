@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
         // create initial conditions only if starting from time zero!
         scalar sheathThickness = 200e-6;
         scalar initNe = 1e2;
-        scalar initNN2p = 1e9;
+        scalar initNN2p = 1e10;
         scalar initNO2m = 1e9;
         #include "initDensity.H"
     }

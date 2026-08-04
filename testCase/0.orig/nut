@@ -15,7 +15,7 @@ FoamFile
 
 dimensions      [0 2 -1 0 0 0 0];
 
-internalField   uniform 0;
+internalField           uniform 0;
 
 boundaryField
 {
@@ -45,7 +45,7 @@ boundaryField
 
         // for k-omega and k-epsilon
         type            nutkWallFunction;
-        value uniform 1e-5;
+        value           uniform 1e-5;
     }
 
     NELEMENT
@@ -56,7 +56,7 @@ boundaryField
 
         // for k-omega and k-epsilon
         type            nutkWallFunction;
-        value uniform 1e-5;
+        value           uniform 1e-5;
     }
 
     frontAndBackPlanes
