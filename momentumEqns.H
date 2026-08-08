@@ -23,7 +23,7 @@ if (startupT)
     else
     {
         int count = runTime.timeIndex() - interactionStart;
-        if (count < 1/startupIncrement)
+        if (count < startupMaxCount)
         {
             // gradually increase FEHD
             dimensionedScalar fScale("fScale", dimless, startupIncrement * count);
@@ -43,9 +43,11 @@ fvVectorMatrix UEqn
 );
 
 UEqn.relax();
+
 if (momentumPredictor)
 {
-    UEqn.solve();
+    SolverPerformance<vector> uPerf = UEqn.solve();
+    //if (enableDetailedLogs && Pstream::master()) Info << "Residual U = " << uPerf.finalResidual() << nl;
 }
 
 //call correct() after the pressure loop has updated U

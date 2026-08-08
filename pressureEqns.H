@@ -1,21 +1,5 @@
 
 rAU = 1.0 / ( UEqn.A().ref() + dimensionedScalar("deltaA", UEqn.A().ref().dimensions(), 1e-12 ) );
-
-if (enableDetailedLogs)
-{
-    scalar minRAU = gMin(rAU);
-    scalar maxRAU = gMax(rAU);
-    if (Pstream::master()) Info << "rAU min/max: " << minRAU << " / " << maxRAU << nl;
-
-    scalar minA = gMin(UEqn.A().ref());
-    scalar maxA = gMax(UEqn.A().ref());
-    if (Pstream::master()) Info << "UEqn.A() min/max: " << minA << " / " << maxA << nl;
-
-    vector minH = gMin(UEqn.H().ref());
-    vector maxH = gMax(UEqn.H().ref());
-    if (Pstream::master()) Info << "UEqn.H() min/max: " << minH << " / " << maxH << nl;
-}
-
 rAU.correctBoundaryConditions();
 
 volVectorField HbyA = constrainHbyA(rAU * UEqn.H(), U, p);
@@ -24,6 +8,21 @@ surfaceScalarField phiHbyA
     "phiHbyA",
     fvc::flux(HbyA)
 );
+
+if (enableDetailedLogs)
+{
+    scalar minRAU = gMin(rAU);
+    scalar avgRAU = gSum(mesh.V() * rAU.primitiveField()) / gSum(mesh.V());
+    scalar maxRAU = gMax(rAU);
+    tmp<volScalarField> magHbyA = mag(HbyA);
+    scalar minHbyA = gMin(magHbyA());
+    scalar maxHbyA = gMax(magHbyA());
+    scalar minPhiHbyA = gMin(phiHbyA);
+    scalar maxPhiHbyA = gMax(phiHbyA);
+    if (Pstream::master()) Info << "rAU min/mean/max: " << minRAU << " " << avgRAU << " " << maxRAU
+                                << " HbyA min/max: " << minHbyA << " " << maxHbyA
+                                << " phiHbyA min/max: " << minPhiHbyA << " " << maxPhiHbyA << nl;
+}
 
 adjustPhi(phiHbyA, U, p);
 

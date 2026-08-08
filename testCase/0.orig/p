@@ -29,9 +29,8 @@ boundaryField
 
     OUTLET
     {
-        type            entrainmentPressure;
-        p0              uniform $nBound;
-        value           uniform $nBound;
+        type fixedValue;
+        value uniform 0;
     }
 
     WALL
@@ -46,12 +45,14 @@ boundaryField
 
     PELEMENT
     {
-        type            zeroGradient;
+        type            fixedFluxPressure;
+        value           uniform 0;
     }
 
     NELEMENT
     {
-        type            zeroGradient;
+        type            fixedFluxPressure;
+        value           uniform 0;
     }
 
     #includeEtc "caseDicts/setConstraintTypes"

@@ -37,7 +37,7 @@ if (startupT)
     else
     {
         int count = runTime.timeIndex() - interactionStart;
-        if (count < 1/startupIncrement)
+        if (count < startupMaxCount)
         {
             // gradually increase impact of movement
             dimensionedScalar gScale("gScale", dimless, startupIncrement * count);

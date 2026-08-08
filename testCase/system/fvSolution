@@ -23,8 +23,8 @@ solvers
 
         smoother        GaussSeidel;
 
-        referenceCell   0;
-        referenceValue  0.0;
+        //referenceCell   0;
+        //referenceValue  0.0;
 
         nPreSweeps         0;
         nPostSweeps        2;
@@ -185,7 +185,7 @@ PIMPLE
     pRefValue       0;
 }
 
-potentialFlow
+electrostaticPotential
 {
     nNonOrthogonalCorrectors 50;
 }
@@ -215,6 +215,9 @@ relaxationFactors
     equations
     {
         U               0.5;
+        k               0.3;
+        omega           0.3;
+        epsilon         0.3;
         ne              0.3;
         nN2p            0.3;
         nO2m            0.3;

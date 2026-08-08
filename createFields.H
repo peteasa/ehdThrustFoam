@@ -163,7 +163,7 @@ volScalarField delta
 int interactionStart = 0;
 
 // Stabilise phiE electrostatic potential
-const dictionary& potentialDict = fvSolutionDict.subDict("potentialFlow");
+const dictionary& potentialDict = fvSolutionDict.subDict("electrostaticPotential");
 int nNonOrthogonalPotCorrectors = potentialDict.lookupOrDefault<int>("nNonOrthogonalCorrectors", 50);
 
 if (Pstream::master()) Info << "potential init settings:" << endl

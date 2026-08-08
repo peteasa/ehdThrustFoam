@@ -52,6 +52,7 @@ Description
 #include "viscosityModel.H"
 #include "incompressibleMomentumTransportModel.H"
 #include "adjustPhi.H"
+#include "constrainPressure.H"
 #include "constrainHbyA.H"
 #include "pimpleControl.H"
 #include "functionObjectList.H"
@@ -89,9 +90,9 @@ int main(int argc, char *argv[])
     {
         // create initial conditions only if starting from time zero!
         scalar sheathThickness = 200e-6;
-        scalar initNe = 1e2;
-        scalar initNN2p = 1e10;
-        scalar initNO2m = 1e9;
+        scalar initNe = 1e3;
+        scalar initNN2p = 1e3;
+        scalar initNO2m = 1e3;
         #include "initDensity.H"
     }
 
@@ -108,7 +109,7 @@ int main(int argc, char *argv[])
 
     // depending on the environment
     scalar factMulti = 5.0;
-    int pwr = 9;
+    int pwr = 1;
     scalar factor = factMulti * pow(10.0, pwr);
     bool factorChange = false;
     scalar factorCh_old = factorChange;
@@ -116,7 +117,8 @@ int main(int argc, char *argv[])
     /*************************************************************************/
     // startup time - separate electrostatic and convection interaction
     scalar startupT = 1.5e-6;
-    scalar startupIncrement = 1 / 4e3;
+    scalar startupMaxCount = 4e3;
+    scalar startupIncrement = 1 / startupMaxCount;
 
     /*************************************************************************/
     /*                       Auto adjust parameters                          */
@@ -143,12 +145,12 @@ int main(int argc, char *argv[])
     scalar eeCoRateInitial = 1000.0;
     scalar eeCoRateRunning = 1.0;
     scalar eeCoRateLimit = eeCoRateInitial;
-    scalar eeCoRunTime = 6e-7;
+    scalar eeCoRunTime = 1e-8;
 
     // manage changes in density min/max ratios
     // hysteresis value allows the system to recover from a clamping event
     // to disable use high negative value
-    const scalar recoveryRatio = -5e-7;
+    const scalar recoveryRatio = -1e-6;
     // limit the dynamic recoveryRatio to negative numbers
     const scalar limRecoveryRatio = recoveryRatio / 50;
     scalar NeTargetMin = max(1e-6, minNeLim);
@@ -466,6 +468,7 @@ int main(int argc, char *argv[])
                     // previous change has had little effect
                     // reaction rate is changing rapidly still
                     if (Pstream::master()) Info << "WARNING: eeCoRate is high" << nl;
+                    enableDetailedLogs = true;
                     factMulti -= 1.0;
                     if (factMulti < 1.0)
                     {
@@ -481,6 +484,7 @@ int main(int argc, char *argv[])
                 else if (ecoHyperThresh < maxEeCo)
                 {
                     if (Pstream::master()) Info << "WARNING: maxEeCo is high" << nl;
+                    enableDetailedLogs = true;
                     pwr -= 1;
                     factor = factMulti * pow(10.0, pwr);
                     factorChange = true;
@@ -516,6 +520,7 @@ int main(int argc, char *argv[])
                 else if ( minRCyDec < 0 )
                 {
                     if (Pstream::master()) Info << "WARNING: correct for negative density" << nl;
+                    enableDetailedLogs = true;
                     factMulti -= 1.0;
                     if (factMulti < 1.0)
                     {
@@ -542,7 +547,8 @@ int main(int argc, char *argv[])
 
                     if (intervalCount % maxInterval) intervalCount++;
                 }
-                else if (( neRatioThr < (minNe / maxNe)
+                else if (!factorCh_old
+                         && ( neRatioThr < (minNe / maxNe)
                          && N2RatioThr < (minN2 / maxN2)
                          && O2RatioThr < (minO2 / maxO2) )
                          && (maxDRhoEDtRate < maxDRhoEDtRateThr)
@@ -571,6 +577,7 @@ int main(int argc, char *argv[])
                                || (minO2 / maxO2) < O2RatioHThr ) )
                 {
                     if (Pstream::master()) Info << "WARNING: correct for multiple threshold violation!" << nl;
+                    enableDetailedLogs = true;
                     pwr -= 1;
                     factor = factMulti * pow(10.0, pwr);
                     factorChange = true;
@@ -579,6 +586,7 @@ int main(int argc, char *argv[])
                 } else if (ecoLowerThresh < maxEeCo_old && eeCoRateLimit < eeCoRate)
                 {
                     if (Pstream::master()) Info << "WARNING: eeCoRate is high" << nl;
+                    enableDetailedLogs = true;
                     pwr -= 2;
                     factor = factMulti * pow(10.0, pwr);
                     factorChange = true;
@@ -600,7 +608,7 @@ int main(int argc, char *argv[])
 
                 if (factorChange)
                 {
-                    enableDetailedLogs = true;
+                    // for debug enableDetailedLogs = true;
                     if (ratioThr == denRatioThr && 0 < maxNe && 0 < maxN2 && 0 < maxO2
                         && ( (minNe / maxNe) < neRatioThr
                              || (minN2 / maxN2) < N2RatioThr
@@ -612,6 +620,8 @@ int main(int argc, char *argv[])
 
                     if (!(intervalCount % maxInterval))
                     {
+                        enableDetailedLogs = true;
+
                         denRatioThr = ratioThr;
                         neRatioThr = neRecoveryRatio * densityMulti;
                         N2RatioThr = N2RecoveryRatio * densityMulti;
@@ -635,8 +645,8 @@ int main(int argc, char *argv[])
                 if (enableDetailedLogs && (maxDRhoEDtRateThr < maxDRhoEDtRate) && Pstream::master())
                     Info << runTime.timeIndex() << ": THRESH rapid density changes maxDRhoEDtRate: " << maxDRhoEDtRate << nl;
 
-                if (enableDetailedLogs && Pstream::master())
-                    Info << "maxEeCo: " << maxEeCo << " eeCoRate: " << eeCoRate
+                if ((enableDetailedLogs || factorChange) && Pstream::master())
+                    Info << runTime.timeIndex() << ": maxEeCo: " << maxEeCo << " eeCoRate: " << eeCoRate
                          << " factMulti: " << factMulti << " pwr: " << pwr
                          << " intervalCount: " << intervalCount
                          << " mnRCyDec: " << minRCyDec
@@ -674,7 +684,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        if (enableDetailedLogs)
+        if (enableDetailedLogs || factorChange)
         {
             #include "mpCourantNo.H"
             // #include "setDeltaT.H" : instead opt for a dynamic DeltaT based on the reaction rate
@@ -683,7 +693,7 @@ int main(int argc, char *argv[])
         if (enableDetailedLogs && Pstream::master()) Info<< "Iteration: " << runTime.name() << " index: " << runTime.timeIndex() << nl << nl;
         while (pimple.loop())
         {
-            for (int corr=0; corr<nPhiECorrectors; corr++)
+            for (int corr=0; corr < nPhiECorrectors; corr++)
             {
                 // update species densities and calculate new rhoE
                 #include "calcReactionRate.H"
@@ -756,6 +766,8 @@ int main(int argc, char *argv[])
 
             while (pimple.correct())
             {
+                constrainPressure(p, U, phiHbyA, rAU);
+
                 fvScalarMatrix pEqn
                 (
                     fvm::laplacian(rAU, p) == fvc::div(phiHbyA)
@@ -765,7 +777,8 @@ int main(int argc, char *argv[])
 
                 while (pimple.correctNonOrthogonal())
                 {
-                    pEqn.solve();
+                    SolverPerformance<scalar> pPerf = pEqn.solve();
+                    //if (enableDetailedLogs && Pstream::master()) Info << "Residual p = " << pPerf.finalResidual() << nl;
 
                     if (pimple.finalNonOrthogonalIter())
                     {
@@ -796,7 +809,7 @@ int main(int argc, char *argv[])
             }
 
             // recompute phi with updated U
-            phi = fvc::flux(U);
+            // phi = fvc::flux(U);
 
             #include "thermalEqns.H"
 

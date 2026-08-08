@@ -45,7 +45,7 @@ boundaryField
 
         // for k-omega and k-epsilon
         type            nutkWallFunction;
-        value           uniform 1e-5;
+        value           uniform 0;
     }
 
     NELEMENT
@@ -56,7 +56,7 @@ boundaryField
 
         // for k-omega and k-epsilon
         type            nutkWallFunction;
-        value           uniform 1e-5;
+        value           uniform 0;
     }
 
     frontAndBackPlanes

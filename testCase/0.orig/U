@@ -19,28 +19,30 @@ angle           12;
 
 //magnitude       51.4815;
 //magnitude       40.0;
-magnitude         20.0;
+//magnitude       20.0;
 //magnitude       1.0;
+magnitude       0.7;
+//magnitude       0.7;
 //magnitude       0.5;
 //magnitude       0.1;
 
 radAngle        #calc "degToRad($angle)";
+UField          uniform ( #calc "$magnitude*cos($radAngle)" #calc "$magnitude*sin($radAngle)" 0 );
 
-internalField   uniform ( #calc "$magnitude*cos($radAngle)" #calc "$magnitude*sin($radAngle)" 0 );
+internalField   $UField;
 
 boundaryField
 {
     INLET
     {
-        type            freestreamVelocity;
-        freestreamValue $internalField;
+        type            fixedValue;
+        value           $UField;
     }
 
     OUTLET
     {
         type            pressureInletOutletVelocity;
-        value           uniform (0 0 0);
-        // type            zeroGradient;
+        value           $UField;
     }
 
     WALL
