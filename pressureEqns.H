@@ -9,7 +9,7 @@ surfaceScalarField phiHbyA
     fvc::flux(HbyA)
 );
 
-if (enableDetailedLogs)
+if (0)
 {
     scalar minRAU = gMin(rAU);
     scalar avgRAU = gSum(mesh.V() * rAU.primitiveField()) / gSum(mesh.V());

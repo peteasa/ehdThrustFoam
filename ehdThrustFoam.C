@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
         // create initial conditions only if starting from time zero!
         scalar sheathThickness = 200e-6;
         scalar initNe = 1e3;
-        scalar initNN2p = 1e3;
+        scalar initNN2p = 1e10;
         scalar initNO2m = 1e3;
         #include "initDensity.H"
     }
@@ -446,7 +446,7 @@ int main(int argc, char *argv[])
 
                 minPhiE = gMin(phiE);
                 maxPhiE = gMax(phiE);
-                if (Pstream::master()) Info << "phiE initialised: min/max: " << minPhiE << " / " << maxPhiE
+                if (Pstream::master()) Info << "phiE initialised: min/max: " << minPhiE << " " << maxPhiE
                                             << " phiE extent: " << mag(maxPhiE - minPhiE) << nl;
             }
 
@@ -754,7 +754,7 @@ int main(int argc, char *argv[])
 
                     scalar minPhiE = gMin(phiE);
                     scalar maxPhiE = gMax(phiE);
-                    if (Pstream::master()) Info << "phiE min/max: " << minPhiE << " / " << maxPhiE << nl;
+                    if (Pstream::master()) Info << "phiE min/max: " << minPhiE << " " << maxPhiE << nl;
                 }
             }
 
@@ -778,7 +778,7 @@ int main(int argc, char *argv[])
                 while (pimple.correctNonOrthogonal())
                 {
                     SolverPerformance<scalar> pPerf = pEqn.solve();
-                    //if (enableDetailedLogs && Pstream::master()) Info << "Residual p = " << pPerf.finalResidual() << nl;
+                    // if (enableDetailedLogs && Pstream::master()) Info << "Residual p = " << pPerf.finalResidual() << nl;
 
                     if (pimple.finalNonOrthogonalIter())
                     {
@@ -846,7 +846,7 @@ int main(int argc, char *argv[])
                     }
                 }
 
-                Info << "after clamp min/max U: " << min(mag(U.internalField())).value() << " / " << max(mag(U.internalField())).value() << nl;
+                Info << "after clamp min/max U: " << min(mag(U.internalField())).value() << " " << max(mag(U.internalField())).value() << nl;
 
                 // update the momentum with the updated U
                 momentumTransport->correct();

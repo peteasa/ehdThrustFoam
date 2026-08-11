@@ -7,24 +7,26 @@ if (0 && enableDetailedLogs)
     if (Pstream::master()) Info<< "cell with max magE = " << maxCell << endl;
 }
 
-Pphys = Pamb + rho * p;
-Peff = Pphys * (T0TransRef / T);
-Peff_safe = max(Peff, smallP);
+Pphys_raw = Pamb + rho * p;
+Pphys = max(Pphys_raw, smallP);
+Peff_raw = Pphys_raw * (T0TransRef / T);
+Peff = max(Peff_raw, smallP);
 delta = ( Pphys / P0TransRef ) * ( T0TransRef / T );
 Tc = T - Tzero;
 Psat = Psat0 * exp( 17.27 * Tc / (Tc + dimensionedScalar("mtA", dimTemperature, 237.3)) );
 PH20 = RH * Psat;
-xH20 = PH20 / Pphys;
+tmp<volScalarField> xH20_raw = PH20 / Pphys;
+xH20 = min(xH20_raw(), 1.0);
 
 if (enableDetailedLogs)
 {
-    scalar minPphys = gMin(Pphys.internalField());
-    scalar maxPphys = gMax(Pphys.internalField());
+    scalar minPphys = gMin(Pphys_raw.internalField());
+    scalar maxPphys = gMax(Pphys_raw.internalField());
 
-    scalar minPeff = gMin(Peff.internalField());
-    scalar maxPeff = gMax(Peff.internalField());
-    if (Pstream::master()) Info << "min/max Pphys: " << minPphys << " " << maxPphys
-                                << " min/max Peff: " << minPeff << " " << maxPeff << nl;
+    scalar minPeff = gMin(Peff_raw.internalField());
+    scalar maxPeff = gMax(Peff_raw.internalField());
+    if (Pstream::master()) Info << "min/max raw Pphys: " << minPphys << " " << maxPphys
+                                << " min/max raw Peff: " << minPeff << " " << maxPeff << nl;
 
     scalar minxH20 = gMin(xH20.internalField());
     scalar maxxH20 = gMax(xH20.internalField());
@@ -70,7 +72,7 @@ if (enableDetailedLogs)
 
 // ionisation N2 -> N2+ + e-
 // calculate source ion term (Sion) using the Townsend coefficient alpha
-alpha = A0 * Peff_safe * exp(-B0 * Peff_safe / max(magE, smallE));
+alpha = A0 * Peff * exp(-B0 * Peff / max(magE, smallE));
 
 // Sion is stable when scaled
 Sion = ionScale * alpha * mu_e * magE * ne;
@@ -84,8 +86,8 @@ if (enableDetailedLogs)
 
 // attachment
 // e- + O2 + M -> O2- + M
-eta3b = (C1 + C2 * xH20) * sqr(Peff_safe) * exp( -D * Peff_safe / max(magE, smallE) );
-eta2b = Ad * exp( - pow( ( magE * kB * T0TransRef / Peff_safe - Ed ) / DeltaE , 2) );
+eta3b = (C1 + C2 * xH20) * sqr(Peff) * exp( -D * Peff / max(magE, smallE) );
+eta2b = Ad * exp( - pow( ( magE * kB * T0TransRef / Peff - Ed ) / DeltaE , 2) );
 eta = eta3b + eta2b;
 SO2ion = eta * mu_e * magE * ne;
 

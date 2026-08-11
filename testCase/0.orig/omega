@@ -13,7 +13,7 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-omegaInlet      5.22e-2;
+omegaInlet      1.49e3;
 
 dimensions      [0 0 -1 0 0 0 0];
 

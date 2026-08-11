@@ -105,19 +105,19 @@ neEqn.relax();
 SolverPerformance<scalar> nePerf = neEqn.solve();
 
 // Print electron density residual
-if (enableDetailedLogs && Pstream::master()) Info << "Residual ne = " << nePerf.finalResidual() << nl;
+// if (enableDetailedLogs && Pstream::master()) Info << "Residual ne = " << nePerf.finalResidual() << nl;
 
 nN2pEqn.relax();
 SolverPerformance<scalar> nN2pPerf = nN2pEqn.solve();
 
 // Print ion density residual
-if (enableDetailedLogs && Pstream::master()) Info << "Residual nN2p = " << nN2pPerf.finalResidual() << nl;
+// if (enableDetailedLogs && Pstream::master()) Info << "Residual nN2p = " << nN2pPerf.finalResidual() << nl;
 
 nO2mEqn.relax();
 SolverPerformance<scalar> nO2mPerf = nO2mEqn.solve();
 
 // Print ion density residual
-if (enableDetailedLogs && Pstream::master()) Info << "Residual nO2m = " << nO2mPerf.finalResidual() << nl;
+// if (enableDetailedLogs && Pstream::master()) Info << "Residual nO2m = " << nO2mPerf.finalResidual() << nl;
 
 if (0)
 {

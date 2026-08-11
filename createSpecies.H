@@ -191,7 +191,7 @@ volScalarField alpha
 (
     IOobject("alpha", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
-    A0 * Peff_safe * exp(-B0 * Peff_safe / max(magE, smallE))
+    A0 * Peff * exp(-B0 * Peff / max(magE, smallE))
 );
 
 // attachment e- + O2 + M -> O2- + M
@@ -275,14 +275,14 @@ volScalarField eta3b
 (
     IOobject("eta3b", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
-    (C1 + C2 * xH20) * sqr(Peff_safe) * exp( -D * Peff_safe / max(magE, smallE))
+    (C1 + C2 * xH20) * sqr(Peff) * exp( -D * Peff / max(magE, smallE))
 );
 
 volScalarField eta2b
 (
     IOobject("eta2b", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
-    Ad * exp( - pow( ( magE * kB * T0TransRef / Peff_safe - Ed ) / DeltaE , 2) )
+    Ad * exp( - pow( ( magE * kB * T0TransRef / Peff - Ed ) / DeltaE , 2) )
 );
 
 volScalarField eta

@@ -20,5 +20,5 @@ fvScalarMatrix TEqn
 
 SolverPerformance<scalar> TPerf = TEqn.solve();
 
-if (enableDetailedLogs && Pstream::master()) Info << "Residual T = " << TPerf.finalResidual() << nl;
+// if (enableDetailedLogs && Pstream::master()) Info << "Residual T = " << TPerf.finalResidual() << nl;
 
