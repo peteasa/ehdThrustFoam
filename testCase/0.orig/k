@@ -36,8 +36,7 @@ boundaryField
 
     WALL
     {
-        type            kqRWallFunction;
-        value           uniform $kInlet;
+        type            slip;
     }
 
     PELEMENT

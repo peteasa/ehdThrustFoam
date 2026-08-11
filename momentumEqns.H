@@ -47,7 +47,7 @@ UEqn.relax();
 if (momentumPredictor)
 {
     SolverPerformance<vector> uPerf = UEqn.solve();
-    //if (enableDetailedLogs && Pstream::master()) Info << "Residual U = " << uPerf.finalResidual() << nl;
+    // if (enableDetailedLogs && Pstream::master()) Info << "Residual U = " << uPerf.finalResidual() << nl;
 }
 
 //call correct() after the pressure loop has updated U

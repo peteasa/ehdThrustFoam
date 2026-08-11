@@ -36,8 +36,7 @@ boundaryField
 
     WALL
     {
-        type            omegaWallFunction;
-        value           uniform $omegaInlet;
+        type            slip;
     }
 
     PELEMENT

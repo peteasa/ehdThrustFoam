@@ -24,18 +24,19 @@ boundaryField
 {
     INLET
     {
-        type            zeroGradient;
+        type            freestreamPressure;
+        freestreamValue uniform 0;
     }
 
     OUTLET
     {
-        type fixedValue;
-        value uniform 0;
+        type            fixedValue;
+        value           uniform 0;
     }
 
     WALL
     {
-        type            zeroGradient;
+        type            slip;
     }
 
     frontAndBackPlanes

@@ -90,9 +90,9 @@ int main(int argc, char *argv[])
     {
         // create initial conditions only if starting from time zero!
         scalar sheathThickness = 200e-6;
-        scalar initNe = 1e3;
-        scalar initNN2p = 1e10;
-        scalar initNO2m = 1e3;
+        scalar initNe = 1e4;
+        scalar initNN2p = 1e11;
+        scalar initNO2m = 1e4;
         #include "initDensity.H"
     }
 
@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
 
     // depending on the environment
     scalar factMulti = 5.0;
-    int pwr = 1;
+    int pwr = -2;
     scalar factor = factMulti * pow(10.0, pwr);
     bool factorChange = false;
     scalar factorCh_old = factorChange;
@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
     // divide factor by 10 if (ecoHyperThresh < maxEeCo) to avoid early termination
     // suggest: between 0.3 -> 1.0
     scalar ecoHyperInitial = 2.0;
-    scalar ecoHyperRunning = 0.6;
+    scalar ecoHyperRunning = 0.5;
     scalar ecoHyperThresh = ecoHyperInitial;
     // subtract one from the first none-zero digit of factor if (ecoUpperThresh < maxEeCo)
     // suggest: ecoHyperThresh / 2
@@ -143,14 +143,14 @@ int main(int argc, char *argv[])
     // eeCoRateLimit is likely to be exceeded in the cycle after the factor is increased
     // suggest: between 0.5 -> 1.0
     scalar eeCoRateInitial = 1000.0;
-    scalar eeCoRateRunning = 1.0;
+    scalar eeCoRateRunning = 0.9;
     scalar eeCoRateLimit = eeCoRateInitial;
-    scalar eeCoRunTime = 1e-8;
+    scalar eeCoRunTime = 5.05e-12;
 
     // manage changes in density min/max ratios
     // hysteresis value allows the system to recover from a clamping event
     // to disable use high negative value
-    const scalar recoveryRatio = -1e-6;
+    const scalar recoveryRatio = -5e-6;
     // limit the dynamic recoveryRatio to negative numbers
     const scalar limRecoveryRatio = recoveryRatio / 50;
     scalar NeTargetMin = max(1e-6, minNeLim);
@@ -807,9 +807,6 @@ int main(int argc, char *argv[])
                     if (Pstream::master()) Info << "Pressure corrector: max(U): " << maxMagU << nl;
                 }
             }
-
-            // recompute phi with updated U
-            // phi = fvc::flux(U);
 
             #include "thermalEqns.H"
 

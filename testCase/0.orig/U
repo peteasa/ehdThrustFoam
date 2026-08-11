@@ -17,7 +17,7 @@ dimensions      [0 1 -1 0 0 0 0];
 
 angle           12;
 
-magnitude       40.0;
+magnitude       40.0; // I 0.05 ; k 6.0 ; omega 1.49e3
 
 radAngle        #calc "degToRad($angle)";
 UField          uniform ( #calc "$magnitude*cos($radAngle)" #calc "$magnitude*sin($radAngle)" 0 );
@@ -28,19 +28,20 @@ boundaryField
 {
     INLET
     {
-        type            fixedValue;
-        value           $UField;
+        type            freestreamVelocity;
+        freestreamValue $UField;
     }
 
     OUTLET
     {
-        type            pressureInletOutletVelocity;
-        value           $UField;
+        type inletOutlet;
+        inletValue      uniform (0 0 0);
+        value           uniform (0 0 0);
     }
 
     WALL
     {
-        type            noSlip;
+        type            slip;
     }
 
     PELEMENT
