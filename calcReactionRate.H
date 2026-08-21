@@ -71,17 +71,17 @@ if (enableDetailedLogs)
 }
 
 // ionisation N2 -> N2+ + e-
-// calculate source ion term (Sion) using the Townsend coefficient alpha
+// calculate source ion term (RionN2p) using the Townsend coefficient alpha
 alpha = A0 * Peff * exp(-B0 * Peff / max(magE, smallE));
 
-// Sion is stable when scaled
-Sion = ionScale * alpha * mu_e * magE * ne;
+// RionN2p is stable when scaled
+RionN2p = ionScale * alpha * mu_e * magE * ne;
 
 if (enableDetailedLogs)
 {
-    scalar minSion = gMin(Sion.internalField());
-    scalar maxSion = gMax(Sion.internalField());
-    if (Pstream::master()) Info << "internal min/max Sion: " << minSion << " " << maxSion << nl;
+    scalar minRionN2p = gMin(RionN2p.internalField());
+    scalar maxRionN2p = gMax(RionN2p.internalField());
+    if (Pstream::master()) Info << "internal min/max RionN2p: " << minRionN2p << " " << maxRionN2p << nl;
 }
 
 // attachment
@@ -89,7 +89,7 @@ if (enableDetailedLogs)
 eta3b = (C1 + C2 * xH20) * sqr(Peff) * exp( -D * Peff / max(magE, smallE) );
 eta2b = Ad * exp( - pow( ( magE * kB * T0TransRef / Peff - Ed ) / DeltaE , 2) );
 eta = eta3b + eta2b;
-SO2ion = eta * mu_e * magE * ne;
+RattO2m = eta * mu_e * magE * ne;
 
 if (enableDetailedLogs)
 {
@@ -104,65 +104,65 @@ if (enableDetailedLogs)
                                 << " eta min/max: " << mineta << " " << maxeta
                                 << nl;
 
-    scalar minSO2 = gMin(SO2ion.internalField());
-    scalar maxSO2 = gMax(SO2ion.internalField());
-    if (Pstream::master()) Info << "internal min/max SO2ion: " << minSO2 << " " << maxSO2 << nl;
+    scalar minSO2 = gMin(RattO2m.internalField());
+    scalar maxSO2 = gMax(RattO2m.internalField());
+    if (Pstream::master()) Info << "internal min/max RattO2m: " << minSO2 << " " << maxSO2 << nl;
 
-    //label maxCell = findMax(SO2ion);
-    //if (Pstream::master()) Info<< "cell with max SO2ion = " << maxCell << nl;
+    //label maxCell = findMax(RattO2m);
+    //if (Pstream::master()) Info<< "cell with max RattO2m = " << maxCell << nl;
 }
 
 // detachment O2- -> O2 + e-
-//SO2e = kO2e * nO2m;
+//RdetO2e = kO2e * nO2m;
 nuDet = Adet * Peff * exp(-Eact_eV * eCharge.value() / (kB * T));
-SO2e =  nuDet * nO2m;
+RdetO2e =  nuDet * nO2m;
 
 if (enableDetailedLogs)
 {
     scalar minnuDet = gMin(nuDet.internalField());
     scalar maxnuDet = gMax(nuDet.internalField());
 
-    scalar minSO2e = gMin(SO2e.internalField());
-    scalar maxSO2e = gMax(SO2e.internalField());
-    if (Pstream::master()) Info << "internal min/max SO2e: " << minSO2e << " " << maxSO2e
+    scalar minRdetO2e = gMin(RdetO2e.internalField());
+    scalar maxRdetO2e = gMax(RdetO2e.internalField());
+    if (Pstream::master()) Info << "internal min/max RdetO2e: " << minRdetO2e << " " << maxRdetO2e
                                 << " min/max nuDet: " << minnuDet << " " << maxnuDet
                                 << nl;
 
-    //label maxCell = findMax(SO2e);
-    //if (Pstream::master()) Info<< "cell with max SO2e = " << maxCell << nl;
+    //label maxCell = findMax(RdetO2e);
+    //if (Pstream::master()) Info<< "cell with max RdetO2e = " << maxCell << nl;
 }
 
 // recombination
 // e- + N2+ -> N2
-keiLocal = kei0 * pow(T0ChemRef / T, 0.5) * (Pphys / P0TransRef);
-Rei = keiLocal * ne * nN2p;
+krecN2pLocal = krecN2p0 * pow(T0ChemRef / T, 0.5) * (Pphys / P0TransRef);
+RrecN2p = krecN2pLocal * ne * nN2p;
 
 if (enableDetailedLogs)
 {
-    scalar minRei = gMin(Rei.internalField());
-    scalar maxRei = gMax(Rei.internalField());
-    if (Pstream::master()) Info << "internal min/max Rei: " << minRei << " " << maxRei
+    scalar minRrecN2p = gMin(RrecN2p.internalField());
+    scalar maxRrecN2p = gMax(RrecN2p.internalField());
+    if (Pstream::master()) Info << "internal min/max RrecN2p: " << minRrecN2p << " " << maxRrecN2p
                                 << nl;
 
-    //label maxCell = findMax(Rei);
-    //if (Pstream::master()) Info<< "cell with max Rei = " << maxCell << nl;
+    //label maxCell = findMax(RrecN2p);
+    //if (Pstream::master()) Info<< "cell with max RrecN2p = " << maxCell << nl;
 }
 
 // N2+ + O2- -> N2 + O2
-kiiLocal = kii0 * ( T0ChemRef / T ) * ( 1.0 + humidityCorrection * xH20 );
-Rii = kiiLocal * nN2p * nO2m;
+kiiN2pLocal = kiiN2p0 * ( T0ChemRef / T ) * ( 1.0 + humidityCorrection * xH20 );
+RiiN2p = kiiN2pLocal * nN2p * nO2m;
 
 if (enableDetailedLogs)
 {
-    scalar minRii = gMin(Rii.internalField());
-    scalar maxRii = gMax(Rii.internalField());
-    if (Pstream::master()) Info << "internal min/max Rii: " << minRii << " " << maxRii
+    scalar minRiiN2p = gMin(RiiN2p.internalField());
+    scalar maxRiiN2p = gMax(RiiN2p.internalField());
+    if (Pstream::master()) Info << "internal min/max RiiN2p: " << minRiiN2p << " " << maxRiiN2p
                                 << nl;
 
-    //label maxCell = findMax(Rii);
-    //if (Pstream::master()) Info<< "cell with max Rii = " << maxCell << nl;
+    //label maxCell = findMax(RiiN2p);
+    //if (Pstream::master()) Info<< "cell with max RiiN2p = " << maxCell << nl;
 }
 
-chemReactionRate = mag(Sion) + mag(SO2ion) + mag(SO2e) + mag(Rei) + mag(Rii);
+chemReactionRate = mag(RionN2p) + mag(RattO2m) + mag(RdetO2e) + mag(RrecN2p) + mag(RiiN2p);
 maxReactionRate = gMax(chemReactionRate);
 if (Pstream::master() && enableDetailedLogs) Info << "maxReactionRate: " << maxReactionRate << nl;

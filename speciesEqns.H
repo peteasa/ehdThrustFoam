@@ -74,7 +74,7 @@ fvScalarMatrix neEqn
     + fvm::div(phi_de, ne)
     - fvm::laplacian(De, ne)
  ==
-      Sion - Rei - SO2ion + SO2e
+      RionN2p - RrecN2p - RattO2m + RdetO2e
 );
 // neEqn.solve();
 
@@ -85,7 +85,7 @@ fvScalarMatrix nN2pEqn
     + fvm::div(phi_dN2p, nN2p)
     - fvm::laplacian(DN2p, nN2p)
  ==
-      Sion - Rei - Rii
+      RionN2p - RrecN2p - RiiN2p
 );
 // nN2pEqn.solve();
 
@@ -96,7 +96,7 @@ fvScalarMatrix nO2mEqn
     + fvm::div(phi_dO2m, nO2m)
     - fvm::laplacian(DO2m, nO2m)
  ==
-      SO2ion - Rii - SO2e
+      RattO2m - RiiN2p - RdetO2e
 );
 // nO2mEqn.solve();
 

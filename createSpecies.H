@@ -247,15 +247,15 @@ dimensionedScalar Eact_eV
 );
 
 // recombination e- + N2+ -> N2
-dimensionedScalar kei0
+dimensionedScalar krecN2p0
 (
-    physicalProperties.lookup("kei0")
+    physicalProperties.lookup("krecN2p0")
 );
 
 // for recombination N2+ + O2- -> N2 + O2
-dimensionedScalar kii0
+dimensionedScalar kiiN2p0
 (
-    physicalProperties.lookup("kii0")
+    physicalProperties.lookup("kiiN2p0")
 );
 
 dimensionedScalar humidityCorrection
@@ -264,9 +264,9 @@ dimensionedScalar humidityCorrection
 );
 
 dimensionedScalar ionScale("ionScale", dimless, 1e-1);        // 1e-4
-volScalarField Sion
+volScalarField RionN2p
 (
-    IOobject("Sion", runTime.name(), mesh,
+    IOobject("RionN2p", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
     ionScale * alpha * mu_e * magE * ne
 );
@@ -292,9 +292,9 @@ volScalarField eta
     eta3b + eta2b
 );
 
-volScalarField SO2ion
+volScalarField RattO2m
 (
-    IOobject("SO2ion", runTime.name(), mesh,
+    IOobject("RattO2m", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
     eta * mu_e * magE * ne
 );
@@ -306,46 +306,46 @@ volScalarField nuDet
     Adet * Peff * exp(-Eact_eV * eCharge.value() / (kB * T))
 );
 
-volScalarField SO2e
+volScalarField RdetO2e
 (
-    IOobject("SO2e", runTime.name(), mesh,
+    IOobject("RdetO2e", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
     nuDet * nO2m
 );
 
-volScalarField keiLocal
+volScalarField krecN2pLocal
 (
-    IOobject("keiLocal", runTime.name(), mesh,
+    IOobject("krecN2pLocal", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
-    kei0 * pow(T0ChemRef / T, 0.5) * (Pphys / P0TransRef)
+    krecN2p0 * pow(T0ChemRef / T, 0.5) * (Pphys / P0TransRef)
 );
 
-volScalarField Rei
+volScalarField RrecN2p
 (
-    IOobject("Rei", runTime.name(), mesh,
+    IOobject("RrecN2p", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
-    keiLocal * ne * nN2p
+    krecN2pLocal * ne * nN2p
 );
 
-volScalarField kiiLocal
+volScalarField kiiN2pLocal
 (
-    IOobject("kiiLocal", runTime.name(), mesh,
+    IOobject("kiiN2pLocal", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
-    kii0 * ( T0ChemRef / T ) * ( 1.0 + humidityCorrection * xH20 )
+    kiiN2p0 * ( T0ChemRef / T ) * ( 1.0 + humidityCorrection * xH20 )
 );
 
-volScalarField Rii
+volScalarField RiiN2p
 (
-    IOobject("Rii", runTime.name(), mesh,
+    IOobject("RiiN2p", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
-    kiiLocal * nN2p * nO2m
+    kiiN2pLocal * nN2p * nO2m
 );
 
 volScalarField chemReactionRate
 (
     IOobject("chemReactionRate", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
-    mag(Sion) + mag(SO2ion) + mag(SO2e) + mag(Rei) + mag(Rii)
+    mag(RionN2p) + mag(RattO2m) + mag(RdetO2e) + mag(RrecN2p) + mag(RiiN2p)
 );
 
 scalar maxReactionRate = 0;
