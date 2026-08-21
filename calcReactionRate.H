@@ -9,8 +9,8 @@ if (0 && enableDetailedLogs)
 
 Pphys_raw = Pamb + rho * p;
 Pphys = max(Pphys_raw, smallP);
-Peff_raw = Pphys_raw * (T0TransRef / T);
-Peff = max(Peff_raw, smallP);
+Pphys = min(Pphys, highP);
+Peff = Pphys * (T0TransRef / T);
 delta = ( Pphys / P0TransRef ) * ( T0TransRef / T );
 Tc = T - Tzero;
 Psat = Psat0 * exp( 17.27 * Tc / (Tc + dimensionedScalar("mtA", dimTemperature, 237.3)) );
@@ -23,10 +23,10 @@ if (enableDetailedLogs)
     scalar minPphys = gMin(Pphys_raw.internalField());
     scalar maxPphys = gMax(Pphys_raw.internalField());
 
-    scalar minPeff = gMin(Peff_raw.internalField());
-    scalar maxPeff = gMax(Peff_raw.internalField());
+    scalar minPeff = gMin(Peff.internalField());
+    scalar maxPeff = gMax(Peff.internalField());
     if (Pstream::master()) Info << "min/max raw Pphys: " << minPphys << " " << maxPphys
-                                << " min/max raw Peff: " << minPeff << " " << maxPeff << nl;
+                                << " min/max Peff: " << minPeff << " " << maxPeff << nl;
 
     scalar minxH20 = gMin(xH20.internalField());
     scalar maxxH20 = gMax(xH20.internalField());
@@ -113,7 +113,7 @@ if (enableDetailedLogs)
 }
 
 // detachment O2- -> O2 + e-
-//RdetO2e = kO2e * nO2m;
+//RdetO2e = kdetO2e * nO2m;
 nuDet = Adet * Peff * exp(-Eact_eV * eCharge.value() / (kB * T));
 RdetO2e =  nuDet * nO2m;
 

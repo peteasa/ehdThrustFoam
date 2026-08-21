@@ -116,6 +116,7 @@ volScalarField Pphys_raw
 );
 
 dimensionedScalar smallP("smallP", Pphys_raw.dimensions(), 1e-3);
+dimensionedScalar highP("highP", Pphys_raw.dimensions(), 1e7);
 volScalarField Pphys
 (
     IOobject ( "Pphys", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
@@ -132,16 +133,10 @@ dimensionedScalar P0TransRef
     physicalProperties.lookup("P0TransRef")
 );
 
-volScalarField Peff_raw
-(
-    IOobject ( "Peff_raw", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
-    Pphys_raw * ( T0TransRef / T )
-);
-
 volScalarField Peff
 (
     IOobject ( "Peff", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
-    max(Peff_raw, smallP)
+    Pphys * ( T0TransRef / T )
 );
 
 dimensionedScalar Psearef

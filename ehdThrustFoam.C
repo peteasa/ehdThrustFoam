@@ -367,7 +367,7 @@ int main(int argc, char *argv[])
         }
 
         bool potCorrection = true;
-        while (potCorrection)
+        for (int potLoopCount = 0; potCorrection && potLoopCount < 2; potLoopCount++)
         {
             potCorrection = false;
 
@@ -488,6 +488,8 @@ int main(int argc, char *argv[])
                     pwr -= 1;
                     factor = factMulti * pow(10.0, pwr);
                     factorChange = true;
+
+                    if (intervalCount % maxInterval) intervalCount++;
                 }
                 else if ( minRCyDec && minRCyDec < 2000 && ( (minNe / maxNe) < neRatioHThr
                                                 || (minN2 / maxN2) < N2RatioHThr
@@ -531,7 +533,8 @@ int main(int argc, char *argv[])
                     factor = factMulti * pow(10.0, pwr);
                     factorChange = true;
 
-                    intervalCount = 0;
+                    if (intervalCount % maxInterval) intervalCount++;
+                    if (intervalCount % maxInterval) intervalCount++;
                 }
                 else if (ecoUpperThresh < maxEeCo)
                 {
@@ -583,7 +586,8 @@ int main(int argc, char *argv[])
                     factorChange = true;
 
                     intervalCount = 0;
-                } else if (ecoLowerThresh < maxEeCo_old && eeCoRateLimit < eeCoRate)
+                }
+                else if (ecoLowerThresh < maxEeCo_old && eeCoRateLimit < eeCoRate)
                 {
                     if (Pstream::master()) Info << "WARNING: eeCoRate is high" << nl;
                     enableDetailedLogs = true;
@@ -605,6 +609,7 @@ int main(int argc, char *argv[])
                     O2RatioThr = O2RecoveryRatio * densityMulti;
                     potCorrection = true;
                 }
+                else if (intervalCount < maxInterval - 1) intervalCount++;
 
                 if (factorChange)
                 {
