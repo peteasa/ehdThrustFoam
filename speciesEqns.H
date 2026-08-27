@@ -126,19 +126,19 @@ if (0)
     // balance the minimum charge: nN2p - nO2m - ne = 0
     minNe = gMin(ne);
     maxNe = gMax(ne);
-    minN2 = gMin(nN2p);
-    maxN2 = gMax(nN2p);
-    minO2 = gMin(nO2m);
-    maxO2 = gMax(nO2m);
+    minN2p = gMin(nN2p);
+    maxN2p = gMax(nN2p);
+    minO2m = gMin(nO2m);
+    maxO2m = gMax(nO2m);
 
     dimensionedScalar minNeLimD("minNeLimD", ne.dimensions(), minNeLim);
     ne = 0.5 * (ne + sqrt(sqr(ne) + sqr(minNeLimD)));
 
-    dimensionedScalar minN2LimD("minN2LimD", ne.dimensions(), minN2Lim);
-    nN2p = 0.5 * (nN2p + sqrt(sqr(nN2p) + sqr(minN2LimD)));
+    dimensionedScalar minN2pLimD("minN2pLimD", ne.dimensions(), minN2pLim);
+    nN2p = 0.5 * (nN2p + sqrt(sqr(nN2p) + sqr(minN2pLimD)));
 
-    dimensionedScalar minO2LimD("minO2LimD", ne.dimensions(), minO2Lim);
-    nO2m = 0.5 * (nO2m + sqrt(sqr(nO2m) + sqr(minO2LimD)));
+    dimensionedScalar minO2mLimD("minO2mLimD", ne.dimensions(), minO2mLim);
+    nO2m = 0.5 * (nO2m + sqrt(sqr(nO2m) + sqr(minO2mLimD)));
 }
 
 // update the reference values
@@ -152,14 +152,14 @@ if (enableDetailedLogs)
     scalar maxNe = gMax(ne);
     if (0 < maxNe && Pstream::master()) Info << "min/max ne: " << minNe << " " << maxNe
                                              << " min/max: " << minNe / maxNe << nl;
-    scalar minN2 = gMin(nN2p);
-    scalar maxN2 = gMax(nN2p);
-    if (0 < maxN2 && Pstream::master()) Info << "min/max nN2p: " << minN2 << " " << maxN2
-                                             << " min/max: " << minN2 / maxN2 << nl;
-    scalar minO2 = gMin(nO2m);
-    scalar maxO2 = gMax(nO2m);
-    if (0 < maxO2 && Pstream::master()) Info << "min/max nO2m: " << minO2 << " " << maxO2
-                                             << " min/max: " << minO2 / maxO2 << nl;
+    scalar minN2p = gMin(nN2p);
+    scalar maxN2p = gMax(nN2p);
+    if (0 < maxN2p && Pstream::master()) Info << "min/max nN2p: " << minN2p << " " << maxN2p
+                                             << " min/max: " << minN2p / maxN2p << nl;
+    scalar minO2m = gMin(nO2m);
+    scalar maxO2m = gMax(nO2m);
+    if (0 < maxO2m && Pstream::master()) Info << "min/max nO2m: " << minO2m << " " << maxO2m
+                                             << " min/max: " << minO2m / maxO2m << nl;
 }
 
 if (enableDetailedLogs)

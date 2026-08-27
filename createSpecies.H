@@ -80,6 +80,8 @@ dimensionedScalar Te
     physicalProperties.lookup("Te")
 );
 
+dimensionedScalar TeK = Te * eCharge / kB;
+
 volScalarField De
 (
     IOobject ( "De", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
@@ -162,11 +164,11 @@ volScalarField magE
     mag(E)
 );
 
-dimensionedScalar kB
+volScalarField magE_NTd
 (
-    "kB",
-    dimEnergy/dimTemperature,
-    1.380649e-23
+    IOobject("magE_NTd", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    magE * kB * T0TransRef * 1e21 / Peff
 );
 
 // reference temperature for chemical reactions
@@ -176,14 +178,14 @@ dimensionedScalar T0ChemRef
 );
 
 // ionisation - for Townsend ionisation N2 -> N2+ + e-
-dimensionedScalar A0
+dimensionedScalar AN20
 (
-    physicalProperties.lookup("A0")
+    physicalProperties.lookup("AN20")
 );
 
-dimensionedScalar B0
+dimensionedScalar BN20
 (
-    physicalProperties.lookup("B0")
+    physicalProperties.lookup("BN20")
 );
 
 dimensionedScalar smallE("smallE", magE.dimensions(), 1e3);
@@ -191,7 +193,7 @@ volScalarField alpha
 (
     IOobject("alpha", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
-    A0 * Peff * exp(-B0 * Peff / max(magE, smallE))
+    AN20 * Peff * exp(-BN20 * Peff / max(magE, smallE))
 );
 
 // attachment e- + O2 + M -> O2- + M
@@ -236,9 +238,9 @@ dimensionedScalar DeltaE
 );
 
 // detachment O2- -> O2 + e-
-dimensionedScalar Adet
+dimensionedScalar AdetO2O2m
 (
-    physicalProperties.lookup("Adet")
+    physicalProperties.lookup("AdetO2O2m")
 );
 
 dimensionedScalar Eact_eV
@@ -256,11 +258,6 @@ dimensionedScalar krecN2p0
 dimensionedScalar kiiN2p0
 (
     physicalProperties.lookup("kiiN2p0")
-);
-
-dimensionedScalar humidityCorrection
-(
-    physicalProperties.lookup("humidityCorrection")
 );
 
 dimensionedScalar ionScale("ionScale", dimless, 1e-1);        // 1e-4
@@ -299,26 +296,21 @@ volScalarField RattO2m
     eta * mu_e * magE * ne
 );
 
-volScalarField nuDet
+volScalarField nuDetO2
 (
-    IOobject("nuDet", runTime.name(), mesh,
+    IOobject("nuDetO2", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
-    Adet * Peff * exp(-Eact_eV * eCharge.value() / (kB * T))
+    AdetO2O2m * Peff * exp(-Eact_eV * eCharge.value() / (kB * T))
 );
 
 volScalarField RdetO2e
 (
     IOobject("RdetO2e", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
-    nuDet * nO2m
+    nuDetO2 * nO2m
 );
 
-volScalarField krecN2pLocal
-(
-    IOobject("krecN2pLocal", runTime.name(), mesh,
-             IOobject::NO_READ, IOobject::NO_WRITE),
-    krecN2p0 * pow(T0ChemRef / T, 0.5) * (Pphys / P0TransRef)
-);
+dimensionedScalar krecN2pLocal = krecN2p0 * pow(T0ChemRef / TeK, 0.39);
 
 volScalarField RrecN2p
 (
@@ -331,7 +323,7 @@ volScalarField kiiN2pLocal
 (
     IOobject("kiiN2pLocal", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
-    kiiN2p0 * ( T0ChemRef / T ) * ( 1.0 + humidityCorrection * xH20 )
+    kiiN2p0 * pow(T0ChemRef / T, 0.5)
 );
 
 volScalarField RiiN2p

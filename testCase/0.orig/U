@@ -17,7 +17,10 @@ dimensions      [0 1 -1 0 0 0 0];
 
 angle           12;
 
-magnitude       40.0; // I 0.05 ; k 6.0 ; omega 1.49e3
+magnitude       40.0; // I 0.05 ; k 6.0 ; omega 1.788e3 ; L 0.0025
+//magnitude       30.0; // I 0.05 ; k 3.38 ; omega 1.342e3 ; L 0.0025
+//magnitude       20.0; // I 0.05 ; k 1.5 ; omega 8.94e2 ; L 0.0025
+//magnitude       10.0; // I 0.05 ; k 3.75e-1 ; omega 4.47e2 ; L 0.0025
 
 radAngle        #calc "degToRad($angle)";
 UField          uniform ( #calc "$magnitude*cos($radAngle)" #calc "$magnitude*sin($radAngle)" 0 );

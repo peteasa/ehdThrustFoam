@@ -281,6 +281,13 @@ volScalarField PH20
     RH * Psat
 );
 
+dimensionedScalar kB
+(
+    "kB",
+    dimEnergy/dimTemperature,
+    1.380649e-23
+);
+
 volScalarField xH20
 (
     IOobject ( "xH20", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
