@@ -279,7 +279,7 @@ volScalarField eta2b
 (
     IOobject("eta2b", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
-    Ad * exp( - pow( ( magE * kB * T0TransRef / Peff - Ed ) / DeltaE , 2) )
+    Ad * exp( - pow( ( magE_NTd - EdTd ) / DeltaETd , 2) )
 );
 
 volScalarField eta

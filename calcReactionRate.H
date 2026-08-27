@@ -1,3 +1,12 @@
+if (startupT)
+{
+    if (startupT < runTime.value())
+    {
+        startupPFrac = 0.99;
+        smallP = Pamb * (1.0 - startupPFrac);
+        highP = Pamb * (1.0 + 10 * startupPFrac);
+    } else if (enableDetailedLogs && Pstream::master()) Info << "Slow Start: startupPFrac: " << startupPFrac << " until time: " << startupT << nl;
+}
 
 Pphys_raw = Pamb + rho * p;
 Pphys = max(Pphys_raw, smallP);
@@ -88,7 +97,7 @@ if (enableDetailedLogs)
 // attachment
 // e- + O2 + M -> O2- + M
 eta3b = (C1 + C2 * xH20) * sqr(Peff) * exp( -D * Peff / max(magE, smallE) );
-eta2b = Ad * exp( - pow( ( magE * kB * T0TransRef / Peff - Ed ) / DeltaE , 2) );
+eta2b = Ad * exp( - pow( ( magE_NTd - EdTd ) / DeltaETd , 2) );
 eta = eta3b + eta2b;
 RattO2m = eta * mu_e * magE * ne;
 

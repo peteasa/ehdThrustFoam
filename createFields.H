@@ -115,8 +115,9 @@ volScalarField Pphys_raw
     Pamb + rho * p
 );
 
-dimensionedScalar smallP("smallP", Pphys_raw.dimensions(), 1e-3);
-dimensionedScalar highP("highP", Pphys_raw.dimensions(), 1e7);
+scalar startupPFrac = 0.1;
+dimensionedScalar smallP = Pamb * (1.0 - startupPFrac);
+dimensionedScalar highP = Pamb * (1.0 + startupPFrac);
 volScalarField Pphys
 (
     IOobject ( "Pphys", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
