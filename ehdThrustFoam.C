@@ -120,6 +120,16 @@ int main(int argc, char *argv[])
     scalar startupMaxCount = 4e3;
     scalar startupIncrement = 1 / startupMaxCount;
 
+    scalar startupPHalfwidth = 0.1;
+    scalar startupPMaxCount = 1e3;
+    if (1.0 <= startupPHalfwidth && Pstream::master()) Info << "ERROR: startupPHalfwidth must be less than 1.0" << nl;
+    scalar runLPFrac = 0.89; scalar runHPFrac = 10;
+
+    if (1.0 <= (startupPHalfwidth - runLPFrac) && Pstream::master())
+        Info << "ERROR: runLPFrac must be less than " << 1.0 - startupPHalfwidth << nl;
+    if (runHPFrac + startupPHalfwidth < 1.0 && Pstream::master())
+        Info << "ERROR: runHPFrac should be greater than " << 1.0 - startupPHalfwidth << nl;
+
     /*************************************************************************/
     /*                       Auto adjust parameters                          */
     // manage changes in maxEeCo:
@@ -379,20 +389,27 @@ int main(int argc, char *argv[])
                 if (enableDetailedLogs && 0 < maxNe && Pstream::master()) Info << "before clamp min/max ne: " << minNe << " " << maxNe
                                                                                << " min/max: " << minNe / maxNe
                                                                                << " neRecRatio: " << neRecoveryRatio << nl;
-                dimensionedScalar minNeLimD("minNeLimD", ne.dimensions(), minNeLim);
+                dimensionedScalar minNeLimD("minNeLimD", ne.dimensions(),
+                                            (minNe < 0? max(1e-10, min(maxNe * 0.1, minNeLim)) : 0));
                 ne = 0.5 * (ne + sqrt(sqr(ne) + sqr(minNeLimD)));
 
                 if (enableDetailedLogs && 0 < maxN2p && Pstream::master()) Info << "before clamp min/max nN2p: " << minN2p << " " << maxN2p
                                                                                << " min/max: " << minN2p / maxN2p
                                                                                << " N2pRecRatio: " << N2pRecoveryRatio << nl;
-                dimensionedScalar minN2pLimD("minN2pLimD", ne.dimensions(), minN2pLim);
+                dimensionedScalar minN2pLimD("minN2pLimD", ne.dimensions(),
+                                             (minN2p < 0? max(1e-10, min(maxN2p * 0.1, minN2pLim)) : 0));
                 nN2p = 0.5 * (nN2p + sqrt(sqr(nN2p) + sqr(minN2pLimD)));
 
                 if (enableDetailedLogs && 0 < maxO2m && Pstream::master()) Info << "before clamp min/max nO2m: " << minO2m << " " << maxO2m
                                                                                << " min/max: " << minO2m / maxO2m
                                                                                << " O2mRecRatio: " << O2mRecoveryRatio << nl;
-                dimensionedScalar minO2mLimD("minO2mLimD", ne.dimensions(), minO2mLim);
+                dimensionedScalar minO2mLimD("minO2mLimD", ne.dimensions(),
+                                             (minO2m < 0? max(1e-10, min(maxO2m * 0.1, minO2mLim)) : 0));
                 nO2m = 0.5 * (nO2m + sqrt(sqr(nO2m) + sqr(minO2mLimD)));
+
+                ne.correctBoundaryConditions();
+                nN2p.correctBoundaryConditions();
+                nO2m.correctBoundaryConditions();
 
                 // implement hysteresis using an arbitarily large negative number
                 denRatioThr = -VGREAT;
@@ -405,7 +422,7 @@ int main(int argc, char *argv[])
                     // restart density hysteresis count
                     minRCyDec = ( (minNe / maxNe) < neRecoveryRatio
                                   || (minN2p / maxN2p) < N2pRecoveryRatio
-                                  || (minO2m / maxO2m) <  O2mRecoveryRatio ) ? 3000 : 0;
+                                  || (minO2m / maxO2m) < O2mRecoveryRatio ) ? 3000 : 0;
                 }
 
                 // restart rapid change count

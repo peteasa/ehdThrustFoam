@@ -1,14 +1,43 @@
+Pphys_raw = Pamb + rho * p;
+
 if (startupT)
 {
-    if (startupT < runTime.value())
+    startupLPFrac = startupPHalfwidth;
+    startupHPFrac = startupPHalfwidth;
+    if (runTime.value() < startupT)
     {
-        startupPFrac = 0.99;
-        smallP = Pamb * (1.0 - startupPFrac);
-        highP = Pamb * (1.0 + 10 * startupPFrac);
-    } else if (enableDetailedLogs && Pstream::master()) Info << "Slow Start: startupPFrac: " << startupPFrac << " until time: " << startupT << nl;
+        if (enableDetailedLogs && Pstream::master())
+            Info << "Slow Start: startupLPFrac: " << startupLPFrac << " until time: " << startupT << nl;
+        pStartup = runTime.timeIndex();
+    }
+    else
+    {
+        dimensionedScalar minPphys = gMin(Pphys_raw.internalField());
+        dimensionedScalar maxPphys = gMax(Pphys_raw.internalField());
+        if ((minPphys < Pamb * (1.0 - startupPHalfwidth - runLPFrac)/2) ||
+            (Pamb * (1.5 + startupPHalfwidth + runHPFrac) < maxPphys))
+        {
+            pStartup = runTime.timeIndex();
+        }
+
+        int count = runTime.timeIndex() - pStartup;
+        scalar pScale = 1.0;
+        if (count < startupPMaxCount)
+        {
+            pScale = count / startupPMaxCount;
+        }
+
+        startupLPFrac += runLPFrac * pScale;
+        startupHPFrac += runHPFrac * pScale;
+
+        if ((startupLPFrac < 0.98) && enableDetailedLogs && Pstream::master())
+            Info << "startupLPFrac: " << startupLPFrac << nl;
+    }
+
+    smallP = Pamb * (1.0 - startupLPFrac);
+    highP = Pamb * (1.0 + startupHPFrac);
 }
 
-Pphys_raw = Pamb + rho * p;
 Pphys = max(Pphys_raw, smallP);
 Pphys = min(Pphys, highP);
 Peff = Pphys * (T0TransRef / T);

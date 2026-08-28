@@ -222,19 +222,9 @@ dimensionedScalar EdTd
     physicalProperties.lookup("EdTd")
 );
 
-dimensionedScalar Ed
-(
-    EdTd * 1e-21
-);
-
 dimensionedScalar DeltaETd
 (
     physicalProperties.lookup("DeltaETd")
-);
-
-dimensionedScalar DeltaE
-(
-    DeltaETd * 1e-21
 );
 
 // detachment O2- -> O2 + e-

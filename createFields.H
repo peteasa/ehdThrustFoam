@@ -115,9 +115,12 @@ volScalarField Pphys_raw
     Pamb + rho * p
 );
 
-scalar startupPFrac = 0.1;
-dimensionedScalar smallP = Pamb * (1.0 - startupPFrac);
-dimensionedScalar highP = Pamb * (1.0 + startupPFrac);
+// Manage a gradual change in Pphys clipping
+int pStartup = 0;
+scalar startupLPFrac = 0.99;
+scalar startupHPFrac = 10.0;
+dimensionedScalar smallP = Pamb * (1.0 - startupLPFrac);
+dimensionedScalar highP = Pamb * (1.0 + startupHPFrac);
 volScalarField Pphys
 (
     IOobject ( "Pphys", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),

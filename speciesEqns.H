@@ -119,11 +119,10 @@ SolverPerformance<scalar> nO2mPerf = nO2mEqn.solve();
 // Print ion density residual
 // if (enableDetailedLogs && Pstream::master()) Info << "Residual nO2m = " << nO2mPerf.finalResidual() << nl;
 
-if (0)
+if (1)
 {
     // Experimental
     // suppress un-physical negative densities
-    // balance the minimum charge: nN2p - nO2m - ne = 0
     minNe = gMin(ne);
     maxNe = gMax(ne);
     minN2p = gMin(nN2p);
@@ -131,14 +130,26 @@ if (0)
     minO2m = gMin(nO2m);
     maxO2m = gMax(nO2m);
 
-    dimensionedScalar minNeLimD("minNeLimD", ne.dimensions(), minNeLim);
-    ne = 0.5 * (ne + sqrt(sqr(ne) + sqr(minNeLimD)));
+    if (1)
+    {
+        dimensionedScalar minNeLimD("minNeLimD", ne.dimensions(),
+                                    (minNe < 0? max(1e-10, min(maxNe * 0.1, minNeLim)) : 0));
+        ne = 0.5 * (ne + sqrt(sqr(ne) + sqr(minNeLimD)));
+        dimensionedScalar minN2pLimD("minN2pLimD", ne.dimensions(),
+                                     (minN2p < 0? max(1e-10, min(maxN2p * 0.1, minN2pLim)) : 0));
+        nN2p = 0.5 * (nN2p + sqrt(sqr(nN2p) + sqr(minN2pLimD)));
+        dimensionedScalar minO2mLimD("minO2mLimD", ne.dimensions(),
+                                     (minO2m < 0? max(1e-10, min(maxO2m * 0.1, minO2mLim)) : 0));
+        nO2m = 0.5 * (nO2m + sqrt(sqr(nO2m) + sqr(minO2mLimD)));
+    }
 
-    dimensionedScalar minN2pLimD("minN2pLimD", ne.dimensions(), minN2pLim);
-    nN2p = 0.5 * (nN2p + sqrt(sqr(nN2p) + sqr(minN2pLimD)));
-
-    dimensionedScalar minO2mLimD("minO2mLimD", ne.dimensions(), minO2mLim);
-    nO2m = 0.5 * (nO2m + sqrt(sqr(nO2m) + sqr(minO2mLimD)));
+    if (0)
+    {
+        dimensionedScalar minD("minD", ne.dimensions(), 0.0);
+        ne = max(minD, ne);
+        nN2p = max(minD, nN2p);
+        nO2m = max(minD, nO2m);
+    }
 }
 
 // update the reference values
@@ -242,7 +253,7 @@ if (1)
 {
     scalar minRhoE = gMin(rhoE);
     scalar maxRhoE = gMax(rhoE);
-    scalar maxMagRhoE = max(mag(minRhoE ), mag(maxRhoE ));
+    scalar maxMagRhoE = max(mag(minRhoE), mag(maxRhoE));
 
     volScalarField magDRhoEDt
     (
