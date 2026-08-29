@@ -56,6 +56,7 @@ if (enableDetailedLogs)
     scalar minPeff = gMin(Peff.internalField());
     scalar maxPeff = gMax(Peff.internalField());
     if (Pstream::master()) Info << "min/max raw Pphys: " << minPphys << " " << maxPphys
+                                << " min/max frac Pamb: " << minPphys / Pamb.value() << " " << maxPphys / Pamb.value()
                                 << " min/max Peff: " << minPeff << " " << maxPeff << nl;
 
     scalar minT = gMin(T.internalField());
