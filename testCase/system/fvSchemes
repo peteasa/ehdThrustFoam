@@ -53,6 +53,10 @@ divSchemes
     div(phi_de,ne)     bounded Gauss upwind;
     div(phi_gas,nN2p)  bounded Gauss upwind;
     div(phi_dN2p,nN2p) bounded Gauss upwind;
+    div(phi_gas,nO4p)  bounded Gauss upwind;
+    div(phi_dO4p,nO4p) bounded Gauss upwind;
+    div(phi_gas,nO2p)  bounded Gauss upwind;
+    div(phi_dO2p,nO2p) bounded Gauss upwind;
     div(phi_gas,nO2m)  bounded Gauss upwind;
     div(phi_dO2m,nO2m) bounded Gauss upwind;
 
@@ -65,6 +69,8 @@ laplacianSchemes
 
     laplacian(De,ne)      Gauss linear corrected;
     laplacian(DN2p,nN2p)  Gauss linear corrected;
+    laplacian(DO4p,nO4p)  Gauss linear corrected;
+    laplacian(DO2p,nO2p)  Gauss linear corrected;
     laplacian(DO2m,nO2m)  Gauss linear corrected;
     laplacian(alphaEff,T)  Gauss linear corrected;
 }

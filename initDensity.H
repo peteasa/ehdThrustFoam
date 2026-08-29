@@ -44,6 +44,8 @@
         {
             ne[cellI]    = initNe;
             nN2p[cellI]  = initNN2p;
+            nO2p[cellI]  = initNO2p;
+            nO4p[cellI]  = initNO4p;
             nO2m[cellI]  = initNO2m;
         }
     }

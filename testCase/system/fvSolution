@@ -133,7 +133,37 @@ solvers
 
     nN2pFinal
     {
-        $ne;
+        $nN2p;
+        relTol          0;
+    }
+
+    nO4p
+    {
+        solver          smoothSolver;
+        tolerance       1e-08;
+        relTol          1e-06;
+
+        smoother        symGaussSeidel;
+    }
+
+    nO4pFinal
+    {
+        $nO4p;
+        relTol          0;
+    }
+
+    nO2p
+    {
+        solver          smoothSolver;
+        tolerance       1e-08;
+        relTol          1e-06;
+
+        smoother        symGaussSeidel;
+    }
+
+    nO2pFinal
+    {
+        $nO2p;
         relTol          0;
     }
 
@@ -148,7 +178,7 @@ solvers
 
     nO2mFinal
     {
-        $ne;
+        $nO2m;
         relTol          0;
     }
 }
@@ -177,7 +207,7 @@ PIMPLE
         p               1e-6;
         U               1e-6;
         "(k|omega|epsilon)" 1e-5;
-        "(phiE|ne|nN2p|nO2m)" 1e-5;
+        "(phiE|ne|nN2p|nO4p|nO2p|nO2m)" 1e-5;
     }
 #endif
 
@@ -220,6 +250,8 @@ relaxationFactors
         epsilon         0.3;
         ne              0.3;
         nN2p            0.3;
+        nO2p            0.3;
+        nO4p            0.3;
         nO2m            0.3;
         phiE            0.5;
     }

@@ -13,6 +13,20 @@ volScalarField nN2p
     mesh
 );
 
+volScalarField nO4p
+(
+    IOobject("nO4p", runTime.name(), mesh,
+             IOobject::MUST_READ, IOobject::AUTO_WRITE),
+    mesh
+);
+
+volScalarField nO2p
+(
+    IOobject("nO2p", runTime.name(), mesh,
+             IOobject::MUST_READ, IOobject::AUTO_WRITE),
+    mesh
+);
+
 volScalarField nO2m
 (
     IOobject("nO2m", runTime.name(), mesh,
@@ -30,7 +44,7 @@ volScalarField rhoE
         IOobject::NO_READ,
         IOobject::AUTO_WRITE
     ),
-    eCharge * ( nN2p - nO2m - ne )
+    eCharge * ( nN2p + nO4p + nO2p - nO2m - ne )
 );
 
 dimensionedScalar beta
@@ -61,6 +75,28 @@ volScalarField mu_N2p
 (
     IOobject ( "mu_N2p", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
     mu_N2p0 * (1.0 - beta * xH2O) / Peff
+);
+
+dimensionedScalar mu_O4p0
+(
+    physicalProperties.lookup("mu_O4p0")
+);
+
+volScalarField mu_O4p
+(
+    IOobject ( "mu_O4p", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    mu_O4p0 * (1.0 - beta * xH2O) / Peff
+);
+
+dimensionedScalar mu_O2p0
+(
+    physicalProperties.lookup("mu_O2p0")
+);
+
+volScalarField mu_O2p
+(
+    IOobject ( "mu_O2p", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    mu_O2p0 * (1.0 - beta * xH2O) / Peff
 );
 
 dimensionedScalar mu_O2m0
@@ -94,6 +130,18 @@ volScalarField DN2p
     mu_N2p * Te
 );
 
+volScalarField DO4p
+(
+    IOobject ( "DO4p", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    mu_O4p * Te
+);
+
+volScalarField DO2p
+(
+    IOobject ( "DO2p", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    mu_O2p * Te
+);
+
 volScalarField DO2m
 (
     IOobject ( "DO2m", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
@@ -117,6 +165,22 @@ volVectorField GammaN2p
   - DN2p * fvc::grad(nN2p)
 );
 
+volVectorField GammaO4p
+(
+    IOobject ( "GammaO4p", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    U * nO4p
+  + mu_O4p * E * nO4p
+  - DO4p * fvc::grad(nO4p)
+);
+
+volVectorField GammaO2p
+(
+    IOobject ( "GammaO2p", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    U * nO2p
+  + mu_O2p * E * nO2p
+  - DO2p * fvc::grad(nO2p)
+);
+
 volVectorField GammaO2m
 (
     IOobject ( "GammaO2m", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
@@ -137,6 +201,18 @@ volVectorField JN2p
     eCharge * GammaN2p
 );
 
+volVectorField JO4p
+(
+    IOobject ( "JO4p", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    eCharge * GammaO4p
+);
+
+volVectorField JO2p
+(
+    IOobject ( "JO2p", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    eCharge * GammaO2p
+);
+
 volVectorField JO2m
 (
     IOobject ( "JO2m", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
@@ -153,7 +229,7 @@ volVectorField J
         IOobject::NO_READ,
         IOobject::NO_WRITE
     ),
-    Je + JN2p + JO2m
+    Je + JN2p + JO4p + JO2p + JO2m
 );
 
 dimensionedScalar E0("E0", E.dimensions(), 2.5e6);
@@ -189,11 +265,41 @@ dimensionedScalar BN20
 );
 
 dimensionedScalar smallE("smallE", magE.dimensions(), 1e3);
-volScalarField alpha
+volScalarField alphaN2
 (
-    IOobject("alpha", runTime.name(), mesh,
+    IOobject("alphaN2", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
     AN20 * Peff * exp(-BN20 * Peff / max(magE, smallE))
+);
+
+// ionisation - for Townsend ionisation O2 -> O2+ + e-
+dimensionedScalar AO20
+(
+    physicalProperties.lookup("AO20")
+);
+
+dimensionedScalar BO20
+(
+    physicalProperties.lookup("BO20")
+);
+
+volScalarField alphaO2
+(
+    IOobject("alphaO2", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    AO20 * Peff * exp(-BO20 * Peff / max(magE, smallE))
+);
+
+// charge transfer
+dimensionedScalar kCT0
+(
+    physicalProperties.lookup("kCT0")
+);
+
+// O2+ clustering
+dimensionedScalar kcluster04p0
+(
+    physicalProperties.lookup("kcluster04p0")
 );
 
 // attachment e- + O2 + M -> O2- + M
@@ -227,21 +333,62 @@ dimensionedScalar DeltaETd
     physicalProperties.lookup("DeltaETd")
 );
 
-// detachment O2- -> O2 + e-
-dimensionedScalar AdetO2O2m
+// detachment
+dimensionedScalar kdetA0
 (
-    physicalProperties.lookup("AdetO2O2m")
+    physicalProperties.lookup("kdetA0")
 );
 
-dimensionedScalar Eact_eV
+dimensionedScalar kdetB0
 (
-    physicalProperties.lookup("Eact_eV")
+    physicalProperties.lookup("kdetB0")
+);
+
+dimensionedScalar kdetC0
+(
+    physicalProperties.lookup("kdetC0")
+);
+
+// recombination e- + O4+ -> 2O2
+dimensionedScalar krecO4p0
+(
+    physicalProperties.lookup("krecO4p0")
+);
+
+// recombination e- + O2+ -> O2
+dimensionedScalar krecO2p0
+(
+    physicalProperties.lookup("krecO2p0")
 );
 
 // recombination e- + N2+ -> N2
 dimensionedScalar krecN2p0
 (
     physicalProperties.lookup("krecN2p0")
+);
+
+// dissociative recombination e- + O2+ -> 2O
+dimensionedScalar krecDissO2p0
+(
+    physicalProperties.lookup("krecDissO2p0")
+);
+
+// dissociative recombination e- + N2+ -> 2N
+dimensionedScalar krecDissN2p0
+(
+    physicalProperties.lookup("krecDissN2p0")
+);
+
+// for recombination O4+ + O2- -> 3O2
+dimensionedScalar kiiO4p0
+(
+    physicalProperties.lookup("kiiO4p0")
+);
+
+// for recombination O2+ + O2- -> N2 + O2
+dimensionedScalar kiiO2p0
+(
+    physicalProperties.lookup("kiiO2p0")
 );
 
 // for recombination N2+ + O2- -> N2 + O2
@@ -255,7 +402,42 @@ volScalarField RionN2p
 (
     IOobject("RionN2p", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
-    ionScale * alpha * mu_e * magE * ne
+    ionScale * alphaN2 * mu_e * magE * ne
+);
+
+volScalarField RionO2p
+(
+    IOobject("RionO2p", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    ionScale * alphaO2 * mu_e * magE * ne
+);
+
+volScalarField kCTLocal
+(
+    IOobject("kCTLocal", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    kCT0 * pow(T0ChemRef / T, 0.5)
+);
+
+volScalarField RCT
+(
+    IOobject("RCT", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    kCTLocal * nN2p * nO2
+);
+
+volScalarField kcluster04pLocal
+(
+    IOobject("kcluster04pLocal", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    kcluster04p0 * pow(T0ChemRef / T, 3.2)
+);
+
+volScalarField RclustO4p
+(
+    IOobject("RclustO4p", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    kcluster04p0 * nO2p * nO2 * nM
 );
 
 volScalarField eta3b
@@ -286,18 +468,36 @@ volScalarField RattO2m
     eta * mu_e * magE * ne
 );
 
-volScalarField nuDetO2
+volScalarField kdetLocal
 (
-    IOobject("nuDetO2", runTime.name(), mesh,
+    IOobject("kdetLocal", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
-    AdetO2O2m * Peff * exp(-Eact_eV * eCharge.value() / (kB * T))
+    kdetA0 * exp( - pow(kdetB0 / (kdetC0 + magE_NTd), 2) )
 );
 
-volScalarField RdetO2e
+volScalarField Rdet
 (
-    IOobject("RdetO2e", runTime.name(), mesh,
+    IOobject("Rdet", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
-    nuDetO2 * nO2m
+    kdetLocal * nO2m * (nO2 + nN2)
+);
+
+dimensionedScalar krecO4pLocal = krecO4p0 * pow(T0ChemRef / TeK, 0.48);
+
+volScalarField RrecO4p
+(
+    IOobject("RrecO4p", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    krecO4pLocal * ne * nO4p
+);
+
+dimensionedScalar krecO2pLocal = krecO2p0 * pow(T0ChemRef / TeK, 0.7);
+
+volScalarField RrecO2p
+(
+    IOobject("RrecO2p", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    krecO2pLocal * ne * nO2p
 );
 
 dimensionedScalar krecN2pLocal = krecN2p0 * pow(T0ChemRef / TeK, 0.39);
@@ -307,6 +507,62 @@ volScalarField RrecN2p
     IOobject("RrecN2p", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
     krecN2pLocal * ne * nN2p
+);
+
+volScalarField krecDissO2pLocal
+(
+    IOobject("krecDissO2pLocal", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    krecDissO2p0 * pow(T0ChemRef / T, 0.5) * (Pphys / P0TransRef)
+);
+
+volScalarField RrecDissO
+(
+    IOobject("RrecDissO", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    krecDissO2pLocal * ne * nO2p
+);
+
+volScalarField krecDissN2pLocal
+(
+    IOobject("krecDissN2pLocal", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    krecDissN2p0 * pow(T0ChemRef / T, 0.5) * (Pphys / P0TransRef)
+);
+
+volScalarField RrecDissN
+(
+    IOobject("RrecDissN", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    krecDissN2pLocal * ne * nN2p
+);
+
+volScalarField kiiO4pLocal
+(
+    IOobject("kiiO4pLocal", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    kiiO4p0 * pow(T0ChemRef / T, 0.5)
+);
+
+volScalarField RiiO4p
+(
+    IOobject("RiiO4p", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    kiiO4pLocal * nO4p * nO2m
+);
+
+volScalarField kiiO2pLocal
+(
+    IOobject("kiiO2pLocal", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    kiiO2p0 * pow(T0ChemRef / T, 0.5)
+);
+
+volScalarField RiiO2p
+(
+    IOobject("RiiO2p", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    kiiO2pLocal * nO2p * nO2m
 );
 
 volScalarField kiiN2pLocal
@@ -323,11 +579,21 @@ volScalarField RiiN2p
     kiiN2pLocal * nN2p * nO2m
 );
 
-volScalarField chemReactionRate
+volScalarField chemReactionRateControl
 (
-    IOobject("chemReactionRate", runTime.name(), mesh,
+    IOobject("chemReactionRateControl", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
-    mag(RionN2p) + mag(RattO2m) + mag(RdetO2e) + mag(RrecN2p) + mag(RiiN2p)
+    mag(RionN2p) + mag(RrecO4p) + mag(RiiO4p)
+);
+
+volScalarField chemReactionRateFull
+(
+    IOobject("chemReactionRateFull", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    mag(RionN2p) + mag(RionO2p) +
+    mag(RattO2m) + mag(Rdet) +
+    mag(RrecO4p) + mag(RrecO2p) + mag(RrecN2p) + mag(RrecDissO) + mag(RrecDissN) +
+    mag(RiiO4p) + mag(RiiO2p) + mag(RiiN2p)
 );
 
 scalar maxReactionRate = 0;

@@ -292,10 +292,48 @@ dimensionedScalar kB
     1.380649e-23
 );
 
+volScalarField nH2O
+(
+    IOobject ( "nH2O", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    PH2O / (kB * T)
+);
+
 volScalarField xH2O
 (
     IOobject ( "xH2O", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
     PH2O / Pphys
+);
+
+dimensionedScalar xO2
+(
+    physicalProperties.lookup("xO2")
+);
+
+// background neutral densities
+volScalarField nO2
+(
+    IOobject("nO2", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    xO2 * ( Pphys - PH2O) / (kB * T)
+);
+
+dimensionedScalar xN2
+(
+    physicalProperties.lookup("xN2")
+);
+
+volScalarField nN2
+(
+    IOobject("nN2", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    xN2 * ( Pphys - PH2O) / (kB * T)
+);
+
+volScalarField nM
+(
+    IOobject("nM", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    nN2 + nO2 + nH2O
 );
 
 dimensionedScalar Cp0

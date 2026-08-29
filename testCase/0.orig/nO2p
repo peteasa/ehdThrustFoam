@@ -1,0 +1,103 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  13
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       volScalarField;
+    object      nO2p;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 -3 0 0 0 0 0];
+
+nBound          0.0;
+internalField   uniform $nBound;
+
+boundaryField
+{
+    INLET
+    {
+        type            zeroGradient;
+    }
+
+    OUTLET
+    {
+        type            zeroGradient;
+    }
+
+    WALL
+    {
+        type            zeroGradient;
+    }
+
+    frontAndBackPlanes
+    {
+        type            empty;
+    }
+
+    PELEMENT
+    {
+        // ions are created close to the boundary
+        type            zeroGradient;
+        // at the boundary there are no ions
+        //type            fixedValue;
+        //value           uniform $nBound;
+    }
+
+    NELEMENT
+    {
+        // positive ions are absorbed at the rear cathode
+        type            codedMixed;
+        name            nO2PositivityBC;
+
+        // create default reference values
+        refValue        uniform 0;
+        refGradient     uniform 0;
+        valueFraction   uniform 0;
+
+        code
+        #{
+        tmp<scalarField> tNO2Internal = patchInternalField();
+        const scalarField& nO2Internal = tNO2Internal();
+
+        scalarField& refVal = this->refValue();
+        scalarField& refGrad = this->refGrad();
+        scalarField& valFrac = this->valueFraction();
+
+        refVal = 0.0;
+        valFrac = 0.0;
+        refGrad = 0.0;
+
+        scalar nO2threshold = 0.0;
+
+        forAll(this->patch(), i)
+        {
+            scalar nO2 = nO2Internal[i];
+
+            scalar current = this->operator[](i);
+            scalar currentGrad = (nO2 - this->operator[](i)) * patch().deltaCoeffs()[i];
+
+            // discourage un-physical negative densities
+            nO2 = max(nO2, 0);
+
+            // normal gradient
+            refGrad[i] = currentGrad + 0.1 * (0 - currentGrad);
+
+            // enforced boundary value if valFrac[i] = 1
+            refVal[i] = nO2;
+
+            // flux driven - Neumann like (valFrac=0) ; value driven - Dirichlet like (valFrac=1)
+            // more weighted gradient if internal density is positive
+            scalar safetyFactor = 0.2;
+            valFrac[i] = 0.8 + safetyFactor * (nO2Internal[i] < nO2threshold ? 1.0 : 0.0);
+        }
+        #};
+    }
+}
+
+// ************************************************************************* //
