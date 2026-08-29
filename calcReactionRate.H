@@ -44,9 +44,9 @@ Peff = Pphys * (T0TransRef / T);
 delta = ( Pphys / P0TransRef ) * ( T0TransRef / T );
 Tc = T - Tzero;
 Psat = Psat0 * exp( 17.27 * Tc / (Tc + dimensionedScalar("mtA", dimTemperature, 237.3)) );
-PH20 = RH * Psat;
-tmp<volScalarField> xH20_raw = PH20 / Pphys;
-xH20 = min(xH20_raw(), 1.0);
+PH2O = RH * Psat;
+tmp<volScalarField> xH2O_raw = PH2O / Pphys;
+xH2O = min(xH2O_raw(), 1.0);
 
 if (enableDetailedLogs)
 {
@@ -58,9 +58,12 @@ if (enableDetailedLogs)
     if (Pstream::master()) Info << "min/max raw Pphys: " << minPphys << " " << maxPphys
                                 << " min/max Peff: " << minPeff << " " << maxPeff << nl;
 
-    scalar minxH20 = gMin(xH20.internalField());
-    scalar maxxH20 = gMax(xH20.internalField());
-    if (Pstream::master()) Info << "min/max xH20: " << minxH20 << " " << maxxH20 << nl;
+    scalar minT = gMin(T.internalField());
+    scalar maxT = gMax(T.internalField());
+    scalar minxH2O = gMin(xH2O.internalField());
+    scalar maxxH2O = gMax(xH2O.internalField());
+    if (Pstream::master()) Info << "min/max T: " << minT << " " << maxT
+                                << " min/max xH2O: " << minxH2O << " " << maxxH2O << nl;
 }
 
 magE = mag(E);
@@ -72,9 +75,9 @@ if (0 && enableDetailedLogs)
     if (Pstream::master()) Info<< "cell with max magE = " << maxCell << endl;
 }
 
-mu_e = mu_e0 * (1.0 - beta * xH20) / Peff;
-mu_N2p = mu_N2p0 * (1.0 - beta * xH20) / Peff;
-mu_O2m = mu_O2m0 * (1.0 - beta * xH20) / Peff;
+mu_e = mu_e0 * (1.0 - beta * xH2O) / Peff;
+mu_N2p = mu_N2p0 * (1.0 - beta * xH2O) / Peff;
+mu_O2m = mu_O2m0 * (1.0 - beta * xH2O) / Peff;
 
 if (enableDetailedLogs)
 {
@@ -103,8 +106,8 @@ if (enableDetailedLogs)
     scalar maxEN = gMax(magE_NTd.internalField());
 
     if (Pstream::master()) Info << "delta min/max: " << minDelta << " " << maxDelta
-                                << " magE min/max: " << minMagE << " " << maxMagE << nl
-                                << "delta/magE min/max: " << mindelta_magE << " " << maxdelta_magE
+                                << " magE min/max: " << minMagE << " " << maxMagE
+                                << nl << "delta/magE min/max: " << mindelta_magE << " " << maxdelta_magE
                                 << " magE/N min/max: " << minEN << " " << maxEN
                                 << nl;
 }
@@ -125,7 +128,7 @@ if (enableDetailedLogs)
 
 // attachment
 // e- + O2 + M -> O2- + M
-eta3b = (C1 + C2 * xH20) * sqr(Peff) * exp( -D * Peff / max(magE, smallE) );
+eta3b = (C1 + C2 * xH2O) * sqr(Peff) * exp( -D * Peff / max(magE, smallE) );
 eta2b = Ad * exp( - pow( ( magE_NTd - EdTd ) / DeltaETd , 2) );
 eta = eta3b + eta2b;
 RattO2m = eta * mu_e * magE * ne;

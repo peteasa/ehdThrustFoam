@@ -49,7 +49,7 @@ dimensionedScalar mu_e0
 volScalarField mu_e
 (
     IOobject ( "mu_e", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
-    mu_e0 * (1.0 - beta * xH20) / Peff
+    mu_e0 * (1.0 - beta * xH2O) / Peff
 );
 
 dimensionedScalar mu_N2p0
@@ -60,7 +60,7 @@ dimensionedScalar mu_N2p0
 volScalarField mu_N2p
 (
     IOobject ( "mu_N2p", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
-    mu_N2p0 * (1.0 - beta * xH20) / Peff
+    mu_N2p0 * (1.0 - beta * xH2O) / Peff
 );
 
 dimensionedScalar mu_O2m0
@@ -71,7 +71,7 @@ dimensionedScalar mu_O2m0
 volScalarField mu_O2m
 (
     IOobject ( "mu_O2m", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
-    mu_O2m0 * (1.0 - beta * xH20) / Peff
+    mu_O2m0 * (1.0 - beta * xH2O) / Peff
 );
 
 // 2 eV dimTemperature
@@ -262,7 +262,7 @@ volScalarField eta3b
 (
     IOobject("eta3b", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
-    (C1 + C2 * xH20) * sqr(Peff) * exp( -D * Peff / max(magE, smallE))
+    (C1 + C2 * xH2O) * sqr(Peff) * exp( -D * Peff / max(magE, smallE))
 );
 
 volScalarField eta2b

@@ -120,12 +120,13 @@ int main(int argc, char *argv[])
     scalar startupMaxCount = 4e3;
     scalar startupIncrement = 1 / startupMaxCount;
 
-    scalar startupPHalfwidth = 0.1;
+    scalar startupPHalfwidth = 0.01;
+    scalar runHPFrac = 10;
     scalar startupPMaxCount = 1e3;
-    if (1.0 <= startupPHalfwidth && Pstream::master()) Info << "ERROR: startupPHalfwidth must be less than 1.0" << nl;
-    scalar runLPFrac = 0.89; scalar runHPFrac = 10;
 
-    if (1.0 <= (startupPHalfwidth - runLPFrac) && Pstream::master())
+    scalar runLPFrac = 1.0 - 2.0 * startupPHalfwidth;
+    if (1.0 <= startupPHalfwidth && Pstream::master()) Info << "ERROR: startupPHalfwidth must be less than 1.0" << nl;
+    if (1.0 <= (startupPHalfwidth + runLPFrac) && Pstream::master())
         Info << "ERROR: runLPFrac must be less than " << 1.0 - startupPHalfwidth << nl;
     if (runHPFrac + startupPHalfwidth < 1.0 && Pstream::master())
         Info << "ERROR: runHPFrac should be greater than " << 1.0 - startupPHalfwidth << nl;

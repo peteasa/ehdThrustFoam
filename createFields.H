@@ -279,9 +279,9 @@ dimensionedScalar RH
     physicalProperties.lookup("RH")
 );
 
-volScalarField PH20
+volScalarField PH2O
 (
-    IOobject ( "PH20", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    IOobject ( "PH2O", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
     RH * Psat
 );
 
@@ -292,10 +292,10 @@ dimensionedScalar kB
     1.380649e-23
 );
 
-volScalarField xH20
+volScalarField xH2O
 (
-    IOobject ( "xH20", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
-    PH20 / Pphys
+    IOobject ( "xH2O", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
+    PH2O / Pphys
 );
 
 dimensionedScalar Cp0
