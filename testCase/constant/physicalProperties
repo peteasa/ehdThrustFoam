@@ -35,6 +35,10 @@ Pamb            Pamb     [ 1 -1 -2 0 0 0 0 ]  89875;
 
 RH              RH       [ 0 0 0 0 0 0 0 ]    0.5;
 
+// fraction of molecules in dry air
+xN2             xN2      [ 0 0 0 0 0 0 0 ] 0.7808;
+xO2             xO2      [ 0 0 0 0 0 0 0 ] 0.2095;
+
 // reference temperature and pressure for transport related measured constants
 // mu_*, A0, B0, C1, C2, D
 P0TransRef      P0TransRef [ 1 -1 -2 0 0 0 0 ] 101325.0; // 1 atmosphere
@@ -43,6 +47,8 @@ T0TransRef      T0TransRef [0 0 0 1 0 0 0]     288.15;   // 15 degrees C :- 273.
 // mobility - dimArea / dimVoltage / dimTime
 mu_e0           mu_e0    [ 0 -1 0 0 0 1 0 ] 437.43;   // 437.43 (:-> D 0.01) old 5e-3(:->D 0.01)
 mu_N2p0         mu_N2p0  [ 0 -1 0 0 0 1 0 ] 13.998;   // 13.998 (:-> D 0.00032) old 5e-5(:->D 0.0001) -> 1.6e-4(:->D ?)
+mu_O4p0         mu_O4p0  [ 0 -1 0 0 0 1 0 ] 10.0;
+mu_O2p0         mu_O2p0  [ 0 -1 0 0 0 1 0 ] 2.625;
 mu_O2m0         mu_O2m0  [ 0 -1 0 0 0 1 0 ] 2.625;    // 2.625 (:-> D 6e-05) old 3e-5(:->D 6e-05)  -> 1e-4(:->D ?)
 
 beta            beta     [ 0 0 0 0 0 0 0 ] 0.6;     // 0.5 -> 0.8
@@ -51,16 +57,26 @@ beta            beta     [ 0 0 0 0 0 0 0 ] 0.6;     // 0.5 -> 0.8
 T0ChemRef   T0ChemRef    [0 0 0 1 0 0 0] 300.0;   // 26.85 degrees C
 
 // ionisation - for Townsend ionisation
-AN20              AN20   [-1 0 2 0 0 0 0 ] 11.3;    // ~ air 1e5
-BN20              BN20   [ 0 2 -1 0 0 -1 0 ] 274;   // ~ air 3e7
+AO20            AO20     [-1 0 2 0 0 0 0 ] 4.88;
+BO20            BO20     [ 0 2 -1 0 0 -1 0 ] 142.5;
+
+AN20            AN20     [-1 0 2 0 0 0 0 ] 11.3;
+BN20            BN20     [ 0 2 -1 0 0 -1 0 ] 274;
 
 // emission coefficient (increases ne secondary emission on the boundary)
-gamma           gamma    [ 0 0 0 0 0 0 0 ] 0.1;    // 0.01 – 0.2 air discharges
+gamma           gamma    [ 0 0 0 0 0 0 0 ] 0.1;    // 0.01 –> 0.2 air discharges
 
 // for Diffusion coefficients - dimTemperature
 Te              Te       [ 1 2 -3 0 0 -1 0 ] 2.0;   // 2 eV
 
-// attachment e- + O2 -> O2-
+// for charge transfer
+kCT0            kCT0     [ 0 3 -1 0 0 0 0 ] 6.0e-17;
+
+// for ion clustering O2+ + 2O2 -> O4+ + O2
+kcluster04p0    kcluster04p0 [ 0 6 -1 0 0 0 0 ] 2.4e-42; // 2.4e-42
+
+// attachment (kattO2m * ne) -> dimless / dimVolume / dimTime for attachment  e- + O2 -> O2-
+//kattO2m            kattO2m     [ 0 0 -1 0 0 0 0 ] 5e5;    // 1e5 -> 1e7
 // baseline three-body attachment coefficient for dry air
 C1              C1       [-2 1 4 0 0 0 0] 1.2e-5;
 // high-efficiency stabilization provided by H2​O
@@ -76,17 +92,33 @@ EdTd            EdTd     [1 4 -3 0 0 -1 0] 165;
 // width of peak
 DeltaETd        DeltaETd [1 4 -3 0 0 -1 0] 70;
 
-// detachment O2- -> O2 + e-
-// frequency factor
-AdetO2O2m            AdetO2O2m     [-1 1 1 0 0 0 0] 8e4;
-// activation energy (electron affinity) required to strip the electron from O2- ion
-Eact_eV         Eact_eV  [1 2 -2 0 0 0 0] 0.43;  // 0.43 -> 0.45 eV but 0.18 is also possible!
+// detachment (kdetO2e * nO2m) -> dimless / dimVolume / dimTime for detachment O2- -> O2 + e-
+kdetA0           kdetA0  [0 3 -1 0 0 0 0] 1.24e-17;
+kdetB0           kdetB0  [1 4 -3 0 0 -1 0] 179;
+kdetC0           kdetC0  [1 4 -3 0 0 -1 0] 8.8;
 
+// recombination (krecN2p * ne * nN2p) -> dimless / dimVolume / dimTime for recombination e- + N2+ -> N2
+//krecN2p             krecN2p      [ 0 3 -1 0 0 0 0 ] 2e-12;  // 1e-13 -> 1e-12
+// value measured at T0ChemRef = 300 with electron temperature Te
+// recombination e- + O4+ -> 2O2
+krecO4p0        krecO4p0 [0 3 -1 0 0 0 0] 4.2e-12;
+// recombination e- + O2+ -> O2
+krecO2p0        krecO2p0 [0 3 -1 0 0 0 0] 1.95e-13;
 // recombination e- + N2+ -> N2
-// value measured at T0ChemRef = 300
 krecN2p0        krecN2p0 [0 3 -1 0 0 0 0] 2.2e-13;
 
-// recombination N2+ + O2- -> N2 + O2
+// dissociative recombination e- + O2+ -> 2O
+krecDissO2p0    krecDissO2p0 [0 3 -1 0 0 0 0] 2e-12;
+// dissociative recombination e- + N2+ -> 2N
+krecDissN2p0    krecDissN2p0 [0 3 -1 0 0 0 0] 2e-12;
+
+// recombination
+// for recombination O4+ + O2- -> 3O2
+kiiO4p0         kiiO4p0  [0 3 -1 0 0 0 0] 2e-13;
+// for recombination O2+ + O2- -> 2O2
+kiiO2p0         kiiO2p0  [0 3 -1 0 0 0 0] 2e-13;
+// for recombination N2+ + O2- -> N2 + O2
+//kiiN2p             kiiN2p      [ 0 3 -1 0 0 0 0 ] 1e-12;  // 1e-13 -> 1e-12
 // value measured at T0ChemRef = 300
 kiiN2p0         kiiN2p0  [0 3 -1 0 0 0 0] 2e-13;
 
