@@ -277,15 +277,19 @@ volScalarField alphaN2
 );
 
 // ionisation - for Townsend ionisation O2 -> O2+ + e-
-dimensionedScalar AO20
+dimensionedScalar AO2T0
 (
-    physicalProperties.lookup("AO20")
+    physicalProperties.lookup("AO2T0")
 );
 
-dimensionedScalar BO20
+dimensionedScalar AO20 = AO2T0 * dimensionedScalar("ToR_T0", dimTemperature, 298.15) / T0TransRef;
+
+dimensionedScalar BO2T0
 (
-    physicalProperties.lookup("BO20")
+    physicalProperties.lookup("BO2T0")
 );
+
+dimensionedScalar BO20 = BO2T0 * dimensionedScalar("ToR_T0", dimTemperature, 298.15) / T0TransRef;
 
 volScalarField alphaO2
 (
