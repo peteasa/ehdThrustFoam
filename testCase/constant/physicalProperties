@@ -51,8 +51,8 @@ beta            beta     [ 0 0 0 0 0 0 0 ] 0.6;     // 0.5 -> 0.8
 T0ChemRef   T0ChemRef    [0 0 0 1 0 0 0] 300.0;   // 26.85 degrees C
 
 // ionisation - for Townsend ionisation
-AN20              AN20   [-1 0 2 0 0 0 0 ] 11.3;    // ~ air 1e5
-BN20              BN20   [ 0 2 -1 0 0 -1 0 ] 274;   // ~ air 3e7
+AN2T0            AN2T0   [-1 0 2 0 0 0 0 ] 11.25;
+BN2T0            BN2T0   [ 0 2 -1 0 0 -1 0 ] 273.77;
 
 // emission coefficient (increases ne secondary emission on the boundary)
 gamma           gamma    [ 0 0 0 0 0 0 0 ] 0.1;    // 0.01 – 0.2 air discharges

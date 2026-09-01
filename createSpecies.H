@@ -178,15 +178,19 @@ dimensionedScalar T0ChemRef
 );
 
 // ionisation - for Townsend ionisation N2 -> N2+ + e-
-dimensionedScalar AN20
+dimensionedScalar AN2T0
 (
-    physicalProperties.lookup("AN20")
+    physicalProperties.lookup("AN2T0")
 );
 
-dimensionedScalar BN20
+dimensionedScalar AN20 = AN2T0 * dimensionedScalar("ToR_T0", dimTemperature, 298.15) / T0TransRef;
+
+dimensionedScalar BN2T0
 (
-    physicalProperties.lookup("BN20")
+    physicalProperties.lookup("BN2T0")
 );
+
+dimensionedScalar BN20 = BN2T0 * dimensionedScalar("ToR_T0", dimTemperature, 298.15) / T0TransRef;
 
 dimensionedScalar smallE("smallE", magE.dimensions(), 1e3);
 volScalarField alpha
