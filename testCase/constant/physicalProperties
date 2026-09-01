@@ -60,8 +60,8 @@ T0ChemRef   T0ChemRef    [0 0 0 1 0 0 0] 300.0;   // 26.85 degrees C
 AO20            AO20     [-1 0 2 0 0 0 0 ] 4.88;
 BO20            BO20     [ 0 2 -1 0 0 -1 0 ] 142.5;
 
-AN20            AN20     [-1 0 2 0 0 0 0 ] 11.3;
-BN20            BN20     [ 0 2 -1 0 0 -1 0 ] 274;
+AN2T0            AN2T0   [-1 0 2 0 0 0 0 ] 11.25;
+BN2T0            BN2T0   [ 0 2 -1 0 0 -1 0 ] 273.77;
 
 // emission coefficient (increases ne secondary emission on the boundary)
 gamma           gamma    [ 0 0 0 0 0 0 0 ] 0.1;    // 0.01 –> 0.2 air discharges
