@@ -90,11 +90,11 @@ int main(int argc, char *argv[])
     {
         // create initial conditions only if starting from time zero!
         scalar sheathThickness = 200e-6;
-        scalar initNe = 1e4;
-        scalar initNN2p = 1e11;
-        scalar initNO4p = 1e6;
-        scalar initNO2p = 1e6;
-        scalar initNO2m = 1e4;
+        scalar initNe = 1e7;
+        scalar initNN2p = 1e5;
+        scalar initNO4p = 1e7;
+        scalar initNO2p = 1e7;
+        scalar initNO2m = 1e5;
         #include "initDensity.H"
     }
 
@@ -122,7 +122,7 @@ int main(int argc, char *argv[])
 
     /*************************************************************************/
     // startup time - separate electrostatic and convection interaction
-    scalar startupT = 1.5e-6;
+    scalar startupT = 6.0e-7;
     scalar startupMaxCount = 4e3;
     scalar startupIncrement = 1 / startupMaxCount;
 
@@ -209,7 +209,7 @@ int main(int argc, char *argv[])
     // to disable use high value
     scalar maxDRhoEDtRateThrInitial = 2e80;
     scalar maxDRhoEDtRateThrRunning = 5e8;
-    scalar maxDRhoEDtRateRunTime = 1.4e-6;
+    scalar maxDRhoEDtRateRunTime = 5.0e-7;
     scalar maxDRhoEDtRateThr = maxDRhoEDtRateThrInitial;
     // when maxDRhoEDtRateDec is 0 any threshold violation will be acted on
     int maxDRhoEDtRateDec = 0;
