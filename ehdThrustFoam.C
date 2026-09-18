@@ -228,7 +228,7 @@ int main(int argc, char *argv[])
     scalar PPhiE_old = 0;
     while (runTime.loop())
     {
-        int iterPerLogs = 1000;
+        int iterPerLogs = 500;
         int enableDetailedLogs = !(runTime.timeIndex() % iterPerLogs);
         if (!(intervalCount % maxInterval) || runTime.timeIndex() < 10 || runTime.deltaTValue() < 1e-40)
         {
@@ -291,7 +291,8 @@ int main(int argc, char *argv[])
         scalar maxO2p = gMax(nO2p);
         scalar minO2m = gMin(nO2m);
         scalar maxO2m = gMax(nO2m);
-        if (0 && 0 < maxNe && 0 < maxN2p && 0 < maxO2m)
+
+        if (0 && 0 < maxNe && 0 < maxO4p && 0 < maxO2m)
         {
             // Experimental
             // allow larger negative densities as the max density increases
@@ -302,7 +303,7 @@ int main(int argc, char *argv[])
             minO2mLim = maxO2m * (-ratioThr) * 1e-2 * minO2mLimI;
         }
 
-        if (0 < maxNe && 0 < maxN2p && 0 < maxO2m)
+        if (0 < maxNe && 0 < maxO4p && 0 < maxO2m)
         {
             // Experimental
             scalar denRatioThrOld = denRatioThr;

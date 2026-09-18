@@ -266,7 +266,7 @@ if (enableDetailedLogs)
     //if (Pstream::master()) Info<< "cell with max RiiN2p = " << maxCell << nl;
 }
 
-chemReactionRateControl = mag(RionN2p) + mag(Rdet) + mag(RattO2m) + mag(RrecN2p) + mag(RiiN2p);
+chemReactionRateControl = mag(RionN2p) + mag(RionO2p) + mag(Rdet) + mag(RattO2m) + mag(RrecO4p);
 maxReactionRate = gMax(chemReactionRateControl);
 chemReactionRateFull = mag(RionN2p) + mag(RionO2p) +
     mag(RattO2m) + mag(Rdet) +

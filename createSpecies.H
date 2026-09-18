@@ -591,7 +591,7 @@ volScalarField chemReactionRateControl
 (
     IOobject("chemReactionRateControl", runTime.name(), mesh,
              IOobject::NO_READ, IOobject::NO_WRITE),
-    mag(RionN2p) + mag(RrecO4p) + mag(RiiO4p)
+    mag(RionN2p) + mag(RionO2p) + mag(Rdet) + mag(RattO2m) + mag(RrecO4p)
 );
 
 volScalarField chemReactionRateFull
