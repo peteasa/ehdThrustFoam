@@ -263,7 +263,7 @@ if (1)
 
     scalar maxDRhoEDt = gMax(magDRhoEDt);
 
-    if (0 < maxMagRhoE)
+    if (0 < maxMagRhoE && maxDRhoEDtRateDec < 1000)
     {
         maxDRhoEDtRate = maxDRhoEDt / maxMagRhoE;
     }

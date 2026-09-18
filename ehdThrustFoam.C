@@ -100,9 +100,9 @@ int main(int argc, char *argv[])
     // if ne collapses during the simulation then make this as small
     // as possible because at least this charge will be assigned to
     // every cell in the model whilst correcting for negative densities
-    scalar minNeLimI = 1e-3;
-    scalar minN2pLimI = 1e-3;
-    scalar minO2mLimI = 1e-3;
+    scalar minNeLimI = 1e-6;
+    scalar minN2pLimI = 1e-6;
+    scalar minO2mLimI = 1e-6;
     scalar minNeLim = minNeLimI;
     scalar minN2pLim = minN2pLimI;
     scalar minO2mLim = minO2mLimI;
@@ -164,9 +164,9 @@ int main(int argc, char *argv[])
     const scalar recoveryRatio = -5e-6;
     // limit the dynamic recoveryRatio to negative numbers
     const scalar limRecoveryRatio = recoveryRatio / 50;
-    scalar NeTargetMin = max(1e-6, minNeLim);
-    scalar N2pTargetMin = max(1e-6, minN2pLim);
-    scalar O2mTargetMin = max(1e-6, minO2mLim);
+    scalar NeTargetMin = max(minNeLimI, minNeLim);
+    scalar N2pTargetMin = max(minN2pLimI, minN2pLim);
+    scalar O2mTargetMin = max(minO2mLimI, minO2mLim);
     // initial the dynamic recoveryRatio values
     scalar neRecoveryRatio = recoveryRatio;
     scalar N2pRecoveryRatio = recoveryRatio;
@@ -251,7 +251,7 @@ int main(int argc, char *argv[])
         {
             const fvPatchScalarField& pphiEpatch = phiE.boundaryField()[pPatchID];
             scalar PPhiE = gMax(pphiEpatch);
-            if ((intervalCount % maxInterval) && (1e-10 < mag(PPhiE - PPhiE_old)))
+            if ((intervalCount % maxInterval) && (1e-6 < mag((PPhiE - PPhiE_old)/PPhiE)))
             {
                 if (Pstream::master()) Info << "PPhiE: " << PPhiE << " PPhiE - PPhiE_old: " << PPhiE - PPhiE_old << nl;
                 intervalCount = 0;
@@ -285,9 +285,9 @@ int main(int argc, char *argv[])
             // Experimental
             scalar denRatioThrOld = denRatioThr;
 
-            NeTargetMin = min(max(1e-6, minNeLim), maxNe);
-            N2pTargetMin = min(max(1e-6, minN2pLim), maxN2p);
-            O2mTargetMin = min(max(1e-6, minO2mLim), maxO2m);
+            NeTargetMin = min(max(minNeLimI, minNeLim), maxNe);
+            N2pTargetMin = min(max(minN2pLimI, minN2pLim), maxN2p);
+            O2mTargetMin = min(max(minO2mLimI, minO2mLim), maxO2m);
             neRecoveryRatio = min(limRecoveryRatio,
                                   NeTargetMin / maxNe - (NeTargetMin / maxNe - ratioThr) / densityMulti);
             N2pRecoveryRatio = min(limRecoveryRatio,
@@ -390,23 +390,32 @@ int main(int argc, char *argv[])
                 if (enableDetailedLogs && 0 < maxNe && Pstream::master()) Info << "before clamp min/max ne: " << minNe << " " << maxNe
                                                                                << " min/max: " << minNe / maxNe
                                                                                << " neRecRatio: " << neRecoveryRatio << nl;
-                dimensionedScalar minNeLimD("minNeLimD", ne.dimensions(),
-                                            (minNe < 0? max(1e-10, min(maxNe * 0.1, minNeLim)) : 0));
-                ne = 0.5 * (ne + sqrt(sqr(ne) + sqr(minNeLimD)));
+                if ((minNe / maxNe) < neRatioHThr)
+                {
+                    dimensionedScalar minNeLimD("minNeLimD", ne.dimensions(),
+                                                (minNe < 0? max(1e-10, min(maxNe * 0.1, minNeLim)) : 0));
+                    ne = 0.5 * (ne + sqrt(sqr(ne) + sqr(minNeLimD)));
+                }
 
                 if (enableDetailedLogs && 0 < maxN2p && Pstream::master()) Info << "before clamp min/max nN2p: " << minN2p << " " << maxN2p
                                                                                << " min/max: " << minN2p / maxN2p
                                                                                << " N2pRecRatio: " << N2pRecoveryRatio << nl;
-                dimensionedScalar minN2pLimD("minN2pLimD", ne.dimensions(),
-                                             (minN2p < 0? max(1e-10, min(maxN2p * 0.1, minN2pLim)) : 0));
-                nN2p = 0.5 * (nN2p + sqrt(sqr(nN2p) + sqr(minN2pLimD)));
+                if ((minN2p / maxN2p) < N2pRatioHThr)
+                {
+                    dimensionedScalar minN2pLimD("minN2pLimD", ne.dimensions(),
+                                                 (minN2p < 0? max(1e-10, min(maxN2p * 0.1, minN2pLim)) : 0));
+                    nN2p = 0.5 * (nN2p + sqrt(sqr(nN2p) + sqr(minN2pLimD)));
+                }
 
                 if (enableDetailedLogs && 0 < maxO2m && Pstream::master()) Info << "before clamp min/max nO2m: " << minO2m << " " << maxO2m
                                                                                << " min/max: " << minO2m / maxO2m
                                                                                << " O2mRecRatio: " << O2mRecoveryRatio << nl;
-                dimensionedScalar minO2mLimD("minO2mLimD", ne.dimensions(),
-                                             (minO2m < 0? max(1e-10, min(maxO2m * 0.1, minO2mLim)) : 0));
-                nO2m = 0.5 * (nO2m + sqrt(sqr(nO2m) + sqr(minO2mLimD)));
+                if ((minO2m / maxO2m) < O2mRatioHThr)
+                {
+                    dimensionedScalar minO2mLimD("minO2mLimD", ne.dimensions(),
+                                                 (minO2m < 0? max(1e-10, min(maxO2m * 0.1, minO2mLim)) : 0));
+                    nO2m = 0.5 * (nO2m + sqrt(sqr(nO2m) + sqr(minO2mLimD)));
+                }
 
                 ne.correctBoundaryConditions();
                 nN2p.correctBoundaryConditions();
@@ -430,7 +439,7 @@ int main(int argc, char *argv[])
                 maxDRhoEDtRateDec = 1000;
 
                 // densities likely to have been updated so update rhoE
-                rhoE = eCharge * (nN2p - ne);
+                rhoE = eCharge * (nN2p - nO2m - ne);
             }
 
             if (!(intervalCount % maxInterval))
