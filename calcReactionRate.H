@@ -67,6 +67,8 @@ if (enableDetailedLogs)
                                 << " min/max xH2O: " << minxH2O << " " << maxxH2O << nl;
 }
 
+magE_NTdOld = magE_NTd;
+
 magE = mag(E);
 magE_NTd = magE * kB * T0TransRef * 1e21 / Peff;
 
@@ -74,6 +76,22 @@ if (0 && enableDetailedLogs)
 {
     label maxCell = findMax(magE);
     if (Pstream::master()) Info<< "cell with max magE = " << maxCell << endl;
+}
+
+if (1)
+{
+    scalar minENTd = gMin(magE_NTd);
+    scalar maxENTd = gMax(magE_NTd);
+
+    tmp<volScalarField> magDENTdDt = mag(magE_NTd - magE_NTdOld);
+    scalar maxDENTdDt = gMax(magDENTdDt());
+    maxDENTdDt /= runTime.deltaTValue();
+    maxDENTdDtRate = maxDENTdDt / maxENTd;
+
+    if (enableDetailedLogs && Pstream::master()) Info << "min/max magE/N: " << minENTd << " " << maxENTd
+                                                << " maxDENTdDt: " << maxDENTdDt
+                                                << " maxDENTdDtRate: " << maxDENTdDtRate
+                                                << nl;
 }
 
 mu_e = mu_e0 * (1.0 - beta * xH2O) / Peff;
@@ -103,13 +121,9 @@ if (enableDetailedLogs)
     scalar mindelta_magE = gMin(delta_magE());
     scalar maxdelta_magE = gMax(delta_magE());
 
-    scalar minEN = gMin(magE_NTd.internalField());
-    scalar maxEN = gMax(magE_NTd.internalField());
-
     if (Pstream::master()) Info << "delta min/max: " << minDelta << " " << maxDelta
                                 << " magE min/max: " << minMagE << " " << maxMagE
                                 << nl << "delta/magE min/max: " << mindelta_magE << " " << maxdelta_magE
-                                << " magE/N min/max: " << minEN << " " << maxEN
                                 << nl;
 }
 

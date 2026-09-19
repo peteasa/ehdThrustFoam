@@ -171,6 +171,13 @@ volScalarField magE_NTd
     magE * kB * T0TransRef * 1e21 / Peff
 );
 
+volScalarField magE_NTdOld
+(
+    IOobject("magE_NTdOld", runTime.name(), mesh,
+             IOobject::NO_READ, IOobject::NO_WRITE),
+    magE_NTd
+);
+
 // reference temperature for chemical reactions
 dimensionedScalar T0ChemRef
 (

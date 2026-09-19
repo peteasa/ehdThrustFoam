@@ -199,6 +199,10 @@ int main(int argc, char *argv[])
     scalar maxDRhoEDtRateThr = maxDRhoEDtRateThrInitial;
     // when maxDRhoEDtRateDec is 0 any threshold violation will be acted on
     int maxDRhoEDtRateDec = 0;
+
+    // track the change in E/N
+    scalar maxDENTdDtRate = 0;
+    scalar maxDENTdDtRateThr = 1e9;
     /*************************************************************************/
 
     if (Pstream::master()) Info << "currentTime   = " << runTime.name() << nl;
@@ -216,7 +220,8 @@ int main(int argc, char *argv[])
     {
         int iterPerLogs = 1000;
         int enableDetailedLogs = !(runTime.timeIndex() % iterPerLogs);
-        if (!(intervalCount % maxInterval) || runTime.timeIndex() < 10 || runTime.deltaTValue() < 1e-40)
+        if (!(intervalCount % maxInterval) || runTime.timeIndex() < 10 || runTime.deltaTValue() < 1e-40
+            || (0.01 < startupLPFrac && startupLPFrac < 0.015) || (0.95 < startupLPFrac && startupLPFrac < 0.99 ))
         {
             enableDetailedLogs = true;
         }
@@ -475,6 +480,9 @@ int main(int argc, char *argv[])
                 maxPhiE = gMax(phiE);
                 if (Pstream::master()) Info << "phiE initialised: min/max: " << minPhiE << " " << maxPhiE
                                             << " phiE extent: " << mag(maxPhiE - minPhiE) << nl;
+
+                magE = mag(E);
+                magE_NTd = magE * kB * T0TransRef * 1e21 / Peff;
             }
 
             if (2 < runTime.timeIndex())
@@ -577,11 +585,27 @@ int main(int argc, char *argv[])
 
                     if (intervalCount % maxInterval) intervalCount++;
                 }
+                else if (maxDENTdDtRateThr < maxDENTdDtRate
+                         && ecoLowerThresh < maxEeCo)
+                {
+                    factMulti -= 1.0;
+                    if (factMulti < 1.0)
+                    {
+                        pwr -= 1;
+                        factMulti = 9.0;
+                    }
+
+                    factor = factMulti * pow(10.0, pwr);
+                    factorChange = true;
+
+                    if (intervalCount % maxInterval) intervalCount++;
+                }
                 else if (!factorCh_old
                          && ( neRatioThr < (minNe / maxNe)
                          && N2pRatioThr < (minN2p / maxN2p)
                          && O2mRatioThr < (minO2m / maxO2m) )
                          && (maxDRhoEDtRate < maxDRhoEDtRateThr)
+                         && (maxDENTdDtRate < maxDENTdDtRateThr)
                          && minRCyDec == 0
                          && maxDRhoEDtRateDec == 0
                          && maxEeCo < ecoLowerThresh)
@@ -676,6 +700,8 @@ int main(int argc, char *argv[])
                     Info << runTime.timeIndex() << ": THRESH high min/max nO2m: " << minO2m / maxO2m << nl;
                 if (enableDetailedLogs && (maxDRhoEDtRateThr < maxDRhoEDtRate) && Pstream::master())
                     Info << runTime.timeIndex() << ": THRESH rapid density changes maxDRhoEDtRate: " << maxDRhoEDtRate << nl;
+                if (enableDetailedLogs && (maxDENTdDtRateThr < maxDENTdDtRate) && Pstream::master())
+                    Info << runTime.timeIndex() << ": THRESH rapid E/N changes maxDENTdDtRate: " << maxDENTdDtRate << nl;
 
                 if ((enableDetailedLogs || factorChange) && Pstream::master())
                     Info << runTime.timeIndex() << ": maxEeCo: " << maxEeCo << " eeCoRate: " << eeCoRate
