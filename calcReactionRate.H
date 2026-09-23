@@ -30,7 +30,7 @@ if (startupT)
         startupLPFrac += runLPFrac * pScale;
         startupHPFrac += runHPFrac * pScale;
 
-        if ((startupLPFrac < 0.98) && enableDetailedLogs && Pstream::master())
+        if ((startupLPFrac < runLPFrac) && enableDetailedLogs && Pstream::master())
             Info << "startupLPFrac: " << startupLPFrac << nl;
     }
 
