@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
     int pwr = -2;
     scalar factor = factMulti * pow(10.0, pwr);
     bool factorChange = false;
-    scalar factorCh_old = factorChange;
+    bool factorCh_old = factorChange;
 
     /*************************************************************************/
     // startup time - separate electrostatic and convection interaction
@@ -235,7 +235,8 @@ int main(int argc, char *argv[])
         int iterPerLogs = 500;
         int enableDetailedLogs = !(runTime.timeIndex() % iterPerLogs);
         if (!(intervalCount % maxInterval) || runTime.timeIndex() < 10 || runTime.deltaTValue() < 1e-40
-            || (0.01 < startupLPFrac && startupLPFrac < 0.015) || (0.95 < startupLPFrac && startupLPFrac < 0.99 ))
+            || (startupPHalfwidth < startupLPFrac && startupLPFrac < startupPHalfwidth + 0.005)
+            || (runLPFrac - 0.005 < startupLPFrac && startupLPFrac < runLPFrac ))
         {
             enableDetailedLogs = true;
         }
