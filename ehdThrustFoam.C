@@ -123,6 +123,7 @@ int main(int argc, char *argv[])
     scalar startupPHalfwidth = 0.01;
     scalar runHPFrac = 10;
     scalar startupPMaxCount = 1e3;
+    scalar startupPCount = 1;
 
     scalar runLPFrac = 1.0 - 2.0 * startupPHalfwidth;
     if (1.0 <= startupPHalfwidth && Pstream::master()) Info << "ERROR: startupPHalfwidth must be less than 1.0" << nl;
@@ -201,7 +202,6 @@ int main(int argc, char *argv[])
     int maxDRhoEDtRateDec = 0;
 
     // track the change in E/N
-    scalar maxDENTdDtRate = 0;
     scalar maxDENTdDtRateThr = 1e9;
     /*************************************************************************/
 
@@ -259,18 +259,23 @@ int main(int argc, char *argv[])
             scalar PPhiE = gMax(pphiEpatch);
             if ((intervalCount % maxInterval) && (1e-6 < mag((PPhiE - PPhiE_old)/PPhiE)))
             {
-                if (Pstream::master()) Info << "PPhiE: " << PPhiE << " PPhiE - PPhiE_old: " << PPhiE - PPhiE_old << nl;
+                if (Pstream::master()) Info << runTime.timeIndex() << ": PPhiE: " << PPhiE << " PPhiE - PPhiE_old: " << PPhiE - PPhiE_old << nl;
+
                 intervalCount = 0;
                 denRatioThr = ratioThr;
                 neRatioThr = neRecoveryRatio * densityMulti;
                 N2pRatioThr = N2pRecoveryRatio * densityMulti;
                 O2mRatioThr = O2mRecoveryRatio * densityMulti;
-                enableDetailedLogs = true;
             }
 
             PPhiE_old = PPhiE;
         }
 
+        // calcReactionRate.H may be included multiple times
+        // maxDENTdDtRate is calculated once
+        scalar maxDENTdDtRate = 0;
+
+        // sample the densities
         scalar minNe = gMin(ne);
         scalar maxNe = gMax(ne);
         scalar minN2p = gMin(nN2p);
@@ -453,11 +458,6 @@ int main(int argc, char *argv[])
                 intervalCount = 1;
                 factorChange = true;
 
-                scalar minPhiE = gMax(phiE);
-                scalar maxPhiE = gMin(phiE);
-                if (Pstream::master()) Info << "Initialising phiE solving the Poisson equation at time " << runTime.name()
-                                            << ": phiE extent: " << mag(maxPhiE - minPhiE) << nl;
-
                 int nIterations = 50;
                 for (int i = 0; i < nNonOrthogonalPotCorrectors && nIterations; i++)
                 {
@@ -476,14 +476,6 @@ int main(int argc, char *argv[])
                 phiE.correctBoundaryConditions();
                 E = -fvc::grad(phiE);
                 E.correctBoundaryConditions();
-
-                minPhiE = gMin(phiE);
-                maxPhiE = gMax(phiE);
-                if (Pstream::master()) Info << "phiE initialised: min/max: " << minPhiE << " " << maxPhiE
-                                            << " phiE extent: " << mag(maxPhiE - minPhiE) << nl;
-
-                magE = mag(E);
-                magE_NTd = magE * kB * T0TransRef * 1e21 / Peff;
             }
 
             if (2 < runTime.timeIndex())
@@ -586,9 +578,47 @@ int main(int argc, char *argv[])
 
                     if (intervalCount % maxInterval) intervalCount++;
                 }
-                else if (maxDENTdDtRateThr < maxDENTdDtRate
+                else if ( (maxDRhoEDtRateDec < 990)
+                          && maxDRhoEDtRateThr < maxDRhoEDtRate
+                          && ( (minNe / maxNe) < neRatioHThr
+                               || (minN2p / maxN2p) < N2pRatioHThr
+                               || (minO2m / maxO2m) < O2mRatioHThr ) )
+                {
+                    if (Pstream::master()) Info << "WARNING: correct for multiple threshold violation!" << nl;
+                    enableDetailedLogs = true;
+                    pwr -= 1;
+                    factor = factMulti * pow(10.0, pwr);
+                    factorChange = true;
+
+                    intervalCount = 0;
+                }
+                else if (maxDRhoEDtRateDec < 0)
+                {
+                    if (Pstream::master()) Info << "WARNING: correct for rapid density changes" << nl;
+                    enableDetailedLogs = true;
+
+                    intervalCount = 0;
+                    denRatioThr = ratioThr;
+                    neRatioThr = neRecoveryRatio * densityMulti;
+                    N2pRatioThr = N2pRecoveryRatio * densityMulti;
+                    O2mRatioThr = O2mRecoveryRatio * densityMulti;
+                    potCorrection = true;
+                }
+                else if (ecoLowerThresh < maxEeCo_old && eeCoRateLimit < eeCoRate)
+                {
+                    if (Pstream::master()) Info << "WARNING: eeCoRate is high" << nl;
+                    enableDetailedLogs = true;
+                    pwr -= 2;
+                    factor = factMulti * pow(10.0, pwr);
+                    factorChange = true;
+
+                    intervalCount = 0;
+                }
+                else if (!(intervalCount+1 % maxInterval)
+                         && maxDENTdDtRateThr < maxDENTdDtRate
                          && ecoLowerThresh < maxEeCo)
                 {
+                    if (Pstream::master()) Info << "WARNING: maxDENTdDtRate is high" << nl;
                     factMulti -= 1.0;
                     if (factMulti < 1.0)
                     {
@@ -624,42 +654,6 @@ int main(int argc, char *argv[])
                     if ( neRecoveryRatio < (minNe / maxNe)
                          && N2pRecoveryRatio < (minN2p / maxN2p)
                          && O2mRecoveryRatio < (minO2m / maxO2m) ) intervalCount = maxInterval - 1;
-                }
-                else if ( (maxDRhoEDtRateDec < 990)
-                          && maxDRhoEDtRateThr < maxDRhoEDtRate
-                          && ( (minNe / maxNe) < neRatioHThr
-                               || (minN2p / maxN2p) < N2pRatioHThr
-                               || (minO2m / maxO2m) < O2mRatioHThr ) )
-                {
-                    if (Pstream::master()) Info << "WARNING: correct for multiple threshold violation!" << nl;
-                    enableDetailedLogs = true;
-                    pwr -= 1;
-                    factor = factMulti * pow(10.0, pwr);
-                    factorChange = true;
-
-                    intervalCount = 0;
-                }
-                else if (ecoLowerThresh < maxEeCo_old && eeCoRateLimit < eeCoRate)
-                {
-                    if (Pstream::master()) Info << "WARNING: eeCoRate is high" << nl;
-                    enableDetailedLogs = true;
-                    pwr -= 2;
-                    factor = factMulti * pow(10.0, pwr);
-                    factorChange = true;
-
-                    intervalCount = 0;
-                }
-                else if (maxDRhoEDtRateDec < 0)
-                {
-                    if (Pstream::master()) Info << "WARNING: correct for rapid density changes" << nl;
-                    enableDetailedLogs = true;
-
-                    intervalCount = 0;
-                    denRatioThr = ratioThr;
-                    neRatioThr = neRecoveryRatio * densityMulti;
-                    N2pRatioThr = N2pRecoveryRatio * densityMulti;
-                    O2mRatioThr = O2mRecoveryRatio * densityMulti;
-                    potCorrection = true;
                 }
                 else if (intervalCount < maxInterval - 1) intervalCount++;
 
@@ -711,33 +705,37 @@ int main(int argc, char *argv[])
                          << " mnRCyDec: " << minRCyDec
                          << " mxDRDtRate: " << maxDRhoEDtRate
                          << " mxDRDtRateDec: " << maxDRhoEDtRateDec
-                         << " denRatioThr: " << denRatioThr << nl;
+                         << " mxDRDtRateThr: " << maxDRhoEDtRateThr
+                         << " mxDENDtRate: " << maxDENTdDtRate
+                         << " denRatioThr: " << denRatioThr
+                         << nl;
                 maxEeCo_old = maxEeCo;
 
                 // Now update the DeltaT value
                 scalar Vmax = gMax(mesh.V());
-                if (enableDetailedLogs && Pstream::master()) Info << "Vmax: " << Vmax << nl;
                 scalar meshDeltaX = min(Foam::exp(Foam::log(Vmax)/3.0), GREAT);
-                if (enableDetailedLogs && Pstream::master()) Info << "meshDeltaX: " << meshDeltaX << nl;
                 volScalarField magUe
                 (
                     "magUe",
                     mag(mu_e * E)
                 );
                 scalar maxDriftVelocity = gMax(magUe);
-                if (enableDetailedLogs && Pstream::master()) Info << "maxDriftVelocity: " << maxDriftVelocity << nl;
                 scalar dt1 = meshDeltaX / (50 * (maxDriftVelocity + SMALL));
-                if (enableDetailedLogs && Pstream::master()) Info << "dt1: " << dt1 << nl;
 
                 maxReactionRate = max(maxReactionRate, SMALL);
                 scalar dt2 = factor / maxReactionRate;
-                if (enableDetailedLogs && Pstream::master()) Info << "dt2: " << dt2 << nl;
                 scalar deltaT = min(dt1, dt2);
                 deltaT = min(deltaT, dtUpperLimit);
+                if (enableDetailedLogs && Pstream::master())
+                    Info << "Vmax: " << Vmax << " maxDriftVelocity: " << maxDriftVelocity
+                         << " meshDeltaX: " << meshDeltaX
+                         << " maxDriftVelocity: " << maxDriftVelocity
+                         << " dt1: " << dt1
+                         << " dt2: " << dt2
+                         << nl;
                 if (runTime.deltaTValue() < 1e-40) enableDetailedLogs = true;
-                if (enableDetailedLogs && Pstream::master()) Info << ((runTime.deltaTValue() < 1e-40) ? "WARNING: " : "")
-                                                                  << "computed new deltaT: " << deltaT
-                                                                  << " maxDRhoEDtRateThr: " << maxDRhoEDtRateThr << nl;
+                if (enableDetailedLogs && (runTime.deltaTValue() < 1e-40) && Pstream::master())
+                    Info << "WARNING: small deltaT: " << deltaT << nl;
 
                 runTime.setDeltaT(deltaT);
             }
@@ -749,7 +747,10 @@ int main(int argc, char *argv[])
             // #include "setDeltaT.H" : instead opt for a dynamic DeltaT based on the reaction rate
         }
 
-        if (enableDetailedLogs && Pstream::master()) Info<< "Iteration: " << runTime.name() << " index: " << runTime.timeIndex() << nl << nl;
+        if (enableDetailedLogs && Pstream::master()) Info << "Iteration: " << runTime.name()
+                                                          << " index: " << runTime.timeIndex()
+                                                          << " deltaT: " << runTime.deltaTValue()
+                                                          << nl << nl;
         while (pimple.loop())
         {
             for (int corr=0; corr < nPhiECorrectors; corr++)

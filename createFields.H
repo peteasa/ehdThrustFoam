@@ -116,7 +116,6 @@ volScalarField Pphys_raw
 );
 
 // Manage a gradual change in Pphys clipping
-int pStartup = 0;
 scalar startupLPFrac = 0.99;
 scalar startupHPFrac = 10.0;
 dimensionedScalar smallP = Pamb * (1.0 - startupLPFrac);
