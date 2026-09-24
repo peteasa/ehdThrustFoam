@@ -8,24 +8,27 @@ if (startupT)
     {
         if (enableDetailedLogs && Pstream::master())
             Info << "Slow Start: startupLPFrac: " << startupLPFrac << " until time: " << startupT << nl;
-        pStartup = runTime.timeIndex();
     }
     else
     {
         dimensionedScalar minPphys = gMin(Pphys_raw.internalField());
         dimensionedScalar maxPphys = gMax(Pphys_raw.internalField());
+        scalar direction = 0;
         if ((minPphys < Pamb * (1.0 - startupPHalfwidth - runLPFrac)/2) ||
             (Pamb * (1.5 + startupPHalfwidth + runHPFrac) < maxPphys))
         {
-            pStartup = runTime.timeIndex();
+            direction = -1;
+        }
+        else
+        {
+            direction = +1;
         }
 
-        int count = runTime.timeIndex() - pStartup;
-        scalar pScale = 1.0;
-        if (count < startupPMaxCount)
-        {
-            pScale = count / startupPMaxCount;
-        }
+        startupPCount += direction;
+        startupPCount = startupPCount < 1? 1 : startupPCount;
+        startupPCount = startupPMaxCount < startupPCount? startupPMaxCount : startupPCount;
+
+        scalar pScale = startupPCount / startupPMaxCount;
 
         startupLPFrac += runLPFrac * pScale;
         startupHPFrac += runHPFrac * pScale;
@@ -88,12 +91,17 @@ if (1)
     scalar maxENTd = gMax(magE_NTd);
 
     tmp<volScalarField> magDENTdDt = mag(magE_NTd - magE_NTdOld);
-    scalar maxDENTdDt = gMax(magDENTdDt());
-    maxDENTdDt /= runTime.deltaTValue();
-    maxDENTdDtRate = maxDENTdDt / maxENTd;
+    if (!maxDENTdDtRate)
+    {
+        // calcReactionRate.H may be included multiple times
+        // maxDENTdDtRate is calculated once
+        scalar maxDENTdDt = gMax(magDENTdDt());
+        maxDENTdDt /= runTime.deltaTValue();
+        maxDENTdDtRate = maxDENTdDt / maxENTd;
+    }
 
     if (enableDetailedLogs && Pstream::master()) Info << "min/max magE/N: " << minENTd << " " << maxENTd
-                                                << " maxDENTdDt: " << maxDENTdDt
+                                                << " maxDENTdDt: " << maxDENTdDtRate * maxENTd
                                                 << " maxDENTdDtRate: " << maxDENTdDtRate
                                                 << nl;
 }
