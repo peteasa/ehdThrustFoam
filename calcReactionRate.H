@@ -39,6 +39,40 @@ if (startupT)
 
     smallP = Pamb * (1.0 - startupLPFrac);
     highP = Pamb * (1.0 + startupHPFrac);
+
+    if (!maxDENTdDtRate)
+    {
+        // calcReactionRate.H may be included multiple times
+        // maxDENTdDtRate is calculated once
+
+        scalar minPphys = gMin(Pphys_raw.internalField());
+        scalar maxPphys = gMax(Pphys_raw.internalField());
+
+        scalar minPphysAv = (minPphys + minPphys_m1 + minPphys_m2)/3;
+        scalar deltaMinPphys = mag((minPphys - minPphysAv) / minPphysAv);
+        scalar maxPphysAv = (maxPphys + maxPphys_m1 + maxPphys_m2)/3;
+        scalar deltaMaxPphys = mag((maxPphys - maxPphysAv) / maxPphysAv);
+        if ( 0.5 < startupLPFrac && ((0.2 < deltaMinPphys) || (0.2 < deltaMaxPphys)) )
+        {
+            smallP = max(smallP, dimensionedScalar("minP", dimPressure, minPphys_m1));
+            highP = min(highP, dimensionedScalar("maxP", dimPressure, maxPphys_m1));
+        }
+        else
+        {
+            minPphys_m2 = minPphys_m1;
+            minPphys_m1 = minPphys;
+            maxPphys_m2 = maxPphys_m1;
+            maxPphys_m1 = maxPphys;
+        }
+
+        if (enableDetailedLogs && Pstream::master())
+            Info << "min/max temp Pphys_raw: " << minPphys << " " << maxPphys
+                 << " min/max Pphys_m1: " << minPphys_m1 << " " << maxPphys_m1
+                 << " min/max Pphys_m2: " << minPphys_m2 << " " << maxPphys_m2
+                 << nl << "min/max average Pphys_raw: " << minPphysAv << " " << maxPphysAv
+                 << " min/max delta Pphys_raw: " << deltaMinPphys << " " << deltaMaxPphys
+                 << nl;
+    }
 }
 
 Pphys = max(Pphys_raw, smallP);
@@ -74,9 +108,8 @@ if (enableDetailedLogs)
                                 << " min/max xH2O: " << minxH2O << " " << maxxH2O << nl;
 }
 
-magE_NTdOld = magE_NTd;
-
 magE = mag(E);
+magE_NTdOld = magE_NTd;
 magE_NTd = magE * kB * T0TransRef * 1e21 / Peff;
 
 if (0 && enableDetailedLogs)

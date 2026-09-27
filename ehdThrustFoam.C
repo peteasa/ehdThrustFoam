@@ -217,6 +217,12 @@ int main(int argc, char *argv[])
 
     // track the change in E/N
     scalar maxDENTdDtRateThr = 1e9;
+
+    // track the change in Pphys_raw
+    scalar minPphys_m1 = Pamb.value();
+    scalar maxPphys_m1 = Pamb.value();
+    scalar minPphys_m2 = Pamb.value();
+    scalar maxPphys_m2 = Pamb.value();
     /*************************************************************************/
 
     if (Pstream::master()) Info << "currentTime   = " << runTime.name() << nl;
