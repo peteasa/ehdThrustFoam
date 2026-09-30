@@ -87,6 +87,12 @@ if (startupT)
 
             minPphysClip = smallP;
             maxPphysClip = highP;
+
+            if (enableDetailedLogs && Pstream::master())
+                Info << "min/max PphysClip: " << minPphysClip.value() << " " << maxPphysClip.value()
+                     << " min/max PphysAv: " << minPphysAv << " " << maxPphysAv
+                     << " min/max deltaMinPphys: " << deltaMinPphys << " " << deltaMaxPphys
+                     << nl;
         }
     }
 
@@ -147,17 +153,18 @@ if (1)
         maxMagE_m3 = maxMagE_m2;
         maxMagE_m2 = maxMagE_m1;
         maxMagE_m1 = maxMagE;
+        if (enableDetailedLogs && !maxDENTdDtRate && Pstream::master())
+            Info << "maxMagEAv: " << maxMagEAv
+                 << " deltaMaxMagE: " << deltaMaxMagE
+                 << nl;
     }
     else
     {
         scalar minMagE = gMin(magE.internalField());
         if (Pstream::master())
             Info << runTime.timeIndex() << ": THRESH high min/max magE: " << minMagE << " " << maxMagE
-                 << " av magE: " << maxMagEAv
-                 << " delta magE: " << deltaMaxMagE
-                 << nl << "magE_m1: " << maxMagE_m1
-                 << " magE_m2: " << maxMagE_m2
-                 << " magE_m3: " << maxMagE_m3
+                 << " maxMagEAv: " << maxMagEAv
+                 << " deltaMaxMagE: " << deltaMaxMagE
                  << nl;
     }
 }
