@@ -48,31 +48,50 @@ if (startupT)
         scalar minPphys = gMin(Pphys_raw.internalField());
         scalar maxPphys = gMax(Pphys_raw.internalField());
 
-        scalar minPphysAv = (minPphys + minPphys_m1 + minPphys_m2)/3;
+        scalar minPphysAv = (minPphys + minPphys_m1 + minPphys_m2 + minPphys_m3)/4;
         scalar deltaMinPphys = mag((minPphys - minPphysAv) / minPphysAv);
-        scalar maxPphysAv = (maxPphys + maxPphys_m1 + maxPphys_m2)/3;
+        scalar maxPphysAv = (maxPphys + maxPphys_m1 + maxPphys_m2 + maxPphys_m3)/4;
         scalar deltaMaxPphys = mag((maxPphys - maxPphysAv) / maxPphysAv);
-        if ( 0.5 < startupLPFrac && ((0.2 < deltaMinPphys) || (0.2 < deltaMaxPphys)) )
+        if ( 0.5 < startupLPFrac && ((deltaPphysThr < deltaMinPphys) || (deltaPphysThr < deltaMaxPphys)) )
         {
-            smallP = max(smallP, dimensionedScalar("minP", dimPressure, minPphys_m1));
-            highP = min(highP, dimensionedScalar("maxP", dimPressure, maxPphys_m1));
+            minPphysClip = max(smallP, dimensionedScalar("minP", dimPressure, minPphys_m1));
+            maxPphysClip = min(highP, dimensionedScalar("maxP", dimPressure, maxPphys_m1));
+
+            if ( (0 < minPphys) && (0 < maxPphys) )
+            {
+                minPphys_m3 = minPphys_m2;
+                minPphys_m2 = minPphys_m1;
+                minPphys_m1 = (minPphys + minPphysAv) / 2;
+                maxPphys_m3 = maxPphys_m2;
+                maxPphys_m2 = maxPphys_m1;
+                maxPphys_m1 = (maxPphys + maxPphysAv) / 2;
+            }
+
+            if (Pstream::master())
+                Info << runTime.timeIndex() << ": Pphys Clip min/max: " << minPphysClip.value() << " " << maxPphysClip.value()
+                     << " Pphys average min/max: " << minPphysAv << " " << maxPphysAv
+                     << " Pphys delta min/max: " << deltaMinPphys << " " << deltaMaxPphys
+                     << nl;
         }
         else
         {
-            minPphys_m2 = minPphys_m1;
-            minPphys_m1 = minPphys;
-            maxPphys_m2 = maxPphys_m1;
-            maxPphys_m1 = maxPphys;
-        }
+            if ( (0 < minPphys) && (0 < maxPphys) )
+            {
+                minPphys_m3 = minPphys_m2;
+                minPphys_m2 = minPphys_m1;
+                minPphys_m1 = minPphys;
+                maxPphys_m3 = maxPphys_m2;
+                maxPphys_m2 = maxPphys_m1;
+                maxPphys_m1 = maxPphys;
+            }
 
-        if (enableDetailedLogs && Pstream::master())
-            Info << "min/max temp Pphys_raw: " << minPphys << " " << maxPphys
-                 << " min/max Pphys_m1: " << minPphys_m1 << " " << maxPphys_m1
-                 << " min/max Pphys_m2: " << minPphys_m2 << " " << maxPphys_m2
-                 << nl << "min/max average Pphys_raw: " << minPphysAv << " " << maxPphysAv
-                 << " min/max delta Pphys_raw: " << deltaMinPphys << " " << deltaMaxPphys
-                 << nl;
+            minPphysClip = smallP;
+            maxPphysClip = highP;
+        }
     }
+
+    smallP = minPphysClip;
+    highP = maxPphysClip;
 }
 
 Pphys = max(Pphys_raw, smallP);
@@ -109,6 +128,7 @@ if (enableDetailedLogs)
 }
 
 magE = mag(E);
+maxMagE = gMax(magE.internalField());
 magE_NTdOld = magE_NTd;
 magE_NTd = magE * kB * T0TransRef * 1e21 / Peff;
 
@@ -120,14 +140,38 @@ if (0 && enableDetailedLogs)
 
 if (1)
 {
+    scalar maxMagEAv = (maxMagE + maxMagE_m1 + maxMagE_m2 + maxMagE_m3)/4;
+    deltaMaxMagE = mag((maxMagE - maxMagEAv) / maxMagEAv);
+    if ( deltaMaxMagE < deltaMaxMagEThr )
+    {
+        maxMagE_m3 = maxMagE_m2;
+        maxMagE_m2 = maxMagE_m1;
+        maxMagE_m1 = maxMagE;
+    }
+    else
+    {
+        scalar minMagE = gMin(magE.internalField());
+        if (Pstream::master())
+            Info << runTime.timeIndex() << ": THRESH high min/max magE: " << minMagE << " " << maxMagE
+                 << " av magE: " << maxMagEAv
+                 << " delta magE: " << deltaMaxMagE
+                 << nl << "magE_m1: " << maxMagE_m1
+                 << " magE_m2: " << maxMagE_m2
+                 << " magE_m3: " << maxMagE_m3
+                 << nl;
+    }
+}
+
+if (1)
+{
     scalar minENTd = gMin(magE_NTd);
     scalar maxENTd = gMax(magE_NTd);
 
-    tmp<volScalarField> magDENTdDt = mag(magE_NTd - magE_NTdOld);
     if (!maxDENTdDtRate)
     {
         // calcReactionRate.H may be included multiple times
         // maxDENTdDtRate is calculated once
+        tmp<volScalarField> magDENTdDt = mag(magE_NTd - magE_NTdOld);
         scalar maxDENTdDt = gMax(magDENTdDt());
         maxDENTdDt /= runTime.deltaTValue();
         maxDENTdDtRate = maxDENTdDt / maxENTd;
@@ -168,7 +212,7 @@ if (enableDetailedLogs)
     scalar maxDelta = gMax(delta.internalField());
 
     scalar minMagE = gMin(magE.internalField());
-    scalar maxMagE = gMax(magE.internalField());
+    //maxMagE = gMax(magE.internalField());
 
     tmp<volScalarField> delta_magE = delta / max(magE, smallE);
     scalar mindelta_magE = gMin(delta_magE());

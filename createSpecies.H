@@ -240,6 +240,12 @@ volScalarField magE
     mag(E)
 );
 
+scalar maxMagE = gMax(magE.internalField());
+scalar maxMagE_m1 = maxMagE;
+scalar maxMagE_m2 = maxMagE;
+scalar maxMagE_m3 = maxMagE;
+scalar deltaMaxMagE = 0;
+
 volScalarField magE_NTd
 (
     IOobject("magE_NTd", runTime.name(), mesh,

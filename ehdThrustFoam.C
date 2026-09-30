@@ -219,10 +219,10 @@ int main(int argc, char *argv[])
     scalar maxDENTdDtRateThr = 1e9;
 
     // track the change in Pphys_raw
-    scalar minPphys_m1 = Pamb.value();
-    scalar maxPphys_m1 = Pamb.value();
-    scalar minPphys_m2 = Pamb.value();
-    scalar maxPphys_m2 = Pamb.value();
+    scalar deltaPphysThr = 0.05;
+
+    // track the change in magE
+    scalar deltaMaxMagEThr = 0.5;
     /*************************************************************************/
 
     if (Pstream::master()) Info << "currentTime   = " << runTime.name() << nl;
@@ -277,7 +277,7 @@ int main(int argc, char *argv[])
         {
             const fvPatchScalarField& pphiEpatch = phiE.boundaryField()[pPatchID];
             scalar PPhiE = gMax(pphiEpatch);
-            if ((intervalCount % maxInterval) && (1e-6 < mag((PPhiE - PPhiE_old)/PPhiE)))
+            if ((intervalCount % maxInterval) && (1e-8 < mag((PPhiE - PPhiE_old)/PPhiE)))
             {
                 if (Pstream::master()) Info << runTime.timeIndex() << ": PPhiE: " << PPhiE << " PPhiE - PPhiE_old: " << PPhiE - PPhiE_old << nl;
 
@@ -577,7 +577,14 @@ int main(int argc, char *argv[])
                 factorCh_old = factorChange;
                 factorChange = false;
 
-                if (factorCh_old && ecoUpperThresh < maxEeCo && eeCoRateLimit < eeCoRate)
+                if (!factorCh_old && deltaMaxMagEThr < deltaMaxMagE)
+                {
+                    if (Pstream::master()) Info << "WARNING: magE is high" << nl;
+                    factorChange = true;
+
+                    if (intervalCount % maxInterval) intervalCount++;
+                }
+                else if (factorCh_old && ecoUpperThresh < maxEeCo && eeCoRateLimit < eeCoRate)
                 {
                     // previous change has had little effect
                     // reaction rate is changing rapidly still
@@ -787,6 +794,9 @@ int main(int argc, char *argv[])
                     }
                 }
 
+                if (enableDetailedLogs && (deltaMaxMagEThr < deltaMaxMagE) && Pstream::master())
+                    Info << runTime.timeIndex() << ": THRESH high magE: " << maxMagE
+                         << " delta: " << deltaMaxMagE << " >: " << deltaMaxMagEThr << nl;
                 if (1 && enableDetailedLogs && (ecoHyperThresh < maxEeCo) && Pstream::master())
                     Info << runTime.timeIndex() << ": THRESH extreamly high maxEeCo: " << maxEeCo << nl;
                 else if (1 && enableDetailedLogs && (ecoUpperThresh < maxEeCo) && Pstream::master())
