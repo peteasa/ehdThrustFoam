@@ -376,7 +376,7 @@ chemReactionRateControl = mag(RionN2p) + mag(RionO2p) + mag(Rdet) + mag(RattO2m)
 maxReactionRate = gMax(chemReactionRateControl);
 chemReactionRateFull = mag(RionN2p) + mag(RionO2p) +
     mag(RattO2m) + mag(Rdet) +
-    mag(RrecO4p) + mag(RrecO2p) + mag(RrecN2p) + mag(RrecDissO) + mag(RrecDissN) +
+    mag(RrecO4p) + mag(RrecO2p) + mag(RrecN2p) + // mag(RrecDissO) + mag(RrecDissN) +
     mag(RiiO4p) + mag(RiiO2p) + mag(RiiN2p);
 
 scalar maxChemReactionRateFull = gMax(chemReactionRateFull);
