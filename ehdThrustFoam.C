@@ -205,10 +205,8 @@ int main(int argc, char *argv[])
     scalar maxDENTdDtRateThr = 1e9;
 
     // track the change in Pphys_raw
-    scalar minPphys_m1 = Pamb.value();
-    scalar maxPphys_m1 = Pamb.value();
-    scalar minPphys_m2 = Pamb.value();
-    scalar maxPphys_m2 = Pamb.value();
+    scalar deltaPphysThr = 0.05;
+
     /*************************************************************************/
 
     if (Pstream::master()) Info << "currentTime   = " << runTime.name() << nl;
@@ -263,7 +261,7 @@ int main(int argc, char *argv[])
         {
             const fvPatchScalarField& pphiEpatch = phiE.boundaryField()[pPatchID];
             scalar PPhiE = gMax(pphiEpatch);
-            if ((intervalCount % maxInterval) && (1e-6 < mag((PPhiE - PPhiE_old)/PPhiE)))
+            if ((intervalCount % maxInterval) && (1e-8 < mag((PPhiE - PPhiE_old)/PPhiE)))
             {
                 if (Pstream::master()) Info << runTime.timeIndex() << ": PPhiE: " << PPhiE << " PPhiE - PPhiE_old: " << PPhiE - PPhiE_old << nl;
 

@@ -115,11 +115,21 @@ volScalarField Pphys_raw
     Pamb + rho * p
 );
 
+// history for Pphys clipping
+scalar minPphys_m1 = Pamb.value();
+scalar maxPphys_m1 = Pamb.value();
+scalar minPphys_m2 = Pamb.value();
+scalar maxPphys_m2 = Pamb.value();
+scalar minPphys_m3 = Pamb.value();
+scalar maxPphys_m3 = Pamb.value();
+
 // Manage a gradual change in Pphys clipping
 scalar startupLPFrac = 0.99;
 scalar startupHPFrac = 10.0;
 dimensionedScalar smallP = Pamb * (1.0 - startupLPFrac);
 dimensionedScalar highP = Pamb * (1.0 + startupHPFrac);
+dimensionedScalar minPphysClip = smallP;
+dimensionedScalar maxPphysClip = highP;
 volScalarField Pphys
 (
     IOobject ( "Pphys", runTime.name(), mesh, IOobject::NO_READ, IOobject::NO_WRITE ),
