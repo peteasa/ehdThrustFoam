@@ -124,6 +124,7 @@ if (enableDetailedLogs)
 }
 
 magE = mag(E);
+maxMagE = gMax(magE.internalField());
 magE_NTdOld = magE_NTd;
 magE_NTd = magE * kB * T0TransRef * 1e21 / Peff;
 
@@ -135,14 +136,38 @@ if (0 && enableDetailedLogs)
 
 if (1)
 {
+    scalar maxMagEAv = (maxMagE + maxMagE_m1 + maxMagE_m2 + maxMagE_m3)/4;
+    deltaMaxMagE = mag((maxMagE - maxMagEAv) / maxMagEAv);
+    if ( deltaMaxMagE < deltaMaxMagEThr )
+    {
+        maxMagE_m3 = maxMagE_m2;
+        maxMagE_m2 = maxMagE_m1;
+        maxMagE_m1 = maxMagE;
+    }
+    else
+    {
+        scalar minMagE = gMin(magE.internalField());
+        if (Pstream::master())
+            Info << runTime.timeIndex() << ": THRESH high min/max magE: " << minMagE << " " << maxMagE
+                 << " av magE: " << maxMagEAv
+                 << " delta magE: " << deltaMaxMagE
+                 << nl << "magE_m1: " << maxMagE_m1
+                 << " magE_m2: " << maxMagE_m2
+                 << " magE_m3: " << maxMagE_m3
+                 << nl;
+    }
+}
+
+if (1)
+{
     scalar minENTd = gMin(magE_NTd);
     scalar maxENTd = gMax(magE_NTd);
 
-    tmp<volScalarField> magDENTdDt = mag(magE_NTd - magE_NTdOld);
     if (!maxDENTdDtRate)
     {
         // calcReactionRate.H may be included multiple times
         // maxDENTdDtRate is calculated once
+        tmp<volScalarField> magDENTdDt = mag(magE_NTd - magE_NTdOld);
         scalar maxDENTdDt = gMax(magDENTdDt());
         maxDENTdDt /= runTime.deltaTValue();
         maxDENTdDtRate = maxDENTdDt / maxENTd;
@@ -175,7 +200,7 @@ if (enableDetailedLogs)
     scalar maxDelta = gMax(delta.internalField());
 
     scalar minMagE = gMin(magE.internalField());
-    scalar maxMagE = gMax(magE.internalField());
+    //maxMagE = gMax(magE.internalField());
 
     tmp<volScalarField> delta_magE = delta / max(magE, smallE);
     scalar mindelta_magE = gMin(delta_magE());
