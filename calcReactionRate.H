@@ -54,23 +54,24 @@ if (startupT)
         scalar deltaMaxPphys = mag((maxPphys - maxPphysAv) / maxPphysAv);
         if ( 0.5 < startupLPFrac && ((deltaPphysThr < deltaMinPphys) || (deltaPphysThr < deltaMaxPphys)) )
         {
-            minPphysClip = max(smallP, dimensionedScalar("minP", dimPressure, minPphys_m1));
-            maxPphysClip = min(highP, dimensionedScalar("maxP", dimPressure, maxPphys_m1));
+            minPphysClip = max(smallP, dimensionedScalar("minP", dimPressure, minPphysAv));
+            maxPphysClip = min(highP, dimensionedScalar("maxP", dimPressure, maxPphysAv));
 
             if ( (0 < minPphys) && (0 < maxPphys) )
             {
                 minPphys_m3 = minPphys_m2;
                 minPphys_m2 = minPphys_m1;
-                minPphys_m1 = (minPphys + minPphysAv) / 2;
+                minPphys_m1 = minPphysAv;
                 maxPphys_m3 = maxPphys_m2;
                 maxPphys_m2 = maxPphys_m1;
-                maxPphys_m1 = (maxPphys + maxPphysAv) / 2;
+                maxPphys_m1 = maxPphysAv;
             }
 
             if (Pstream::master())
-                Info << runTime.timeIndex() << ": Pphys Clip min/max: " << minPphysClip.value() << " " << maxPphysClip.value()
-                     << " Pphys average min/max: " << minPphysAv << " " << maxPphysAv
-                     << " Pphys delta min/max: " << deltaMinPphys << " " << deltaMaxPphys
+                Info << runTime.timeIndex() << ": PphysClip: " << minPphysClip.value() << " " << maxPphysClip.value()
+                     << " Pphys: " << minPphys << " " << maxPphys
+                     << " PphysAv: " << minPphysAv << " " << maxPphysAv
+                     << " Pphys d: " << deltaMinPphys << " " << deltaMaxPphys
                      << nl;
         }
         else
