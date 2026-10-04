@@ -54,8 +54,10 @@ if (startupT)
         scalar deltaMaxPphys = mag((maxPphys - maxPphysAv) / maxPphysAv);
         if ( 0.5 < startupLPFrac && ((deltaPphysThr < deltaMinPphys) || (deltaPphysThr < deltaMaxPphys)) )
         {
-            minPphysClip = max(smallP, dimensionedScalar("minP", dimPressure, minPphysAv));
-            maxPphysClip = min(highP, dimensionedScalar("maxP", dimPressure, maxPphysAv));
+            scalar minPphysAv3 = (minPphys_m1 + minPphys_m2 + minPphys_m3)/3;
+            scalar maxPphysAv3 = (maxPphys_m1 + maxPphys_m2 + maxPphys_m3)/3;
+            minPphysClip = max(smallP, dimensionedScalar("minP", dimPressure, minPphysAv3));
+            maxPphysClip = min(highP, dimensionedScalar("maxP", dimPressure, maxPphysAv3));
 
             if ( (0 < minPphys) && (0 < maxPphys) )
             {
@@ -145,27 +147,53 @@ if (0 && enableDetailedLogs)
     if (Pstream::master()) Info<< "cell with max magE = " << maxCell << endl;
 }
 
-if (1)
+if (!maxDENTdDtRate)
 {
+    // calcReactionRate.H may be included multiple times
+    // maxDENTdDtRate is calculated once
     scalar maxMagEAv = (maxMagE + maxMagE_m1 + maxMagE_m2 + maxMagE_m3)/4;
     deltaMaxMagE = mag((maxMagE - maxMagEAv) / maxMagEAv);
-    if ( deltaMaxMagE < deltaMaxMagEThr )
+    scalar maxMagEAv3 = (maxMagE_m1 + maxMagE_m2 + maxMagE_m3) / 3;
+    scalar deltaMaxMagE3 = mag((maxMagE - maxMagEAv3) / maxMagEAv3);
+    if ( deltaMaxMagEThr < deltaMaxMagE )
     {
-        maxMagE_m3 = maxMagE_m2;
-        maxMagE_m2 = maxMagE_m1;
-        maxMagE_m1 = maxMagE;
-        if (enableDetailedLogs && !maxDENTdDtRate && Pstream::master())
-            Info << "maxMagEAv: " << maxMagEAv
-                 << " deltaMaxMagE: " << deltaMaxMagE
-                 << nl;
-    }
-    else
-    {
+        if ( deltaMaxMagE3 < 0.3 || (10 < magEUnstableCount) )
+        {
+            maxMagE_m3 = maxMagE_m2;
+            maxMagE_m2 = maxMagE_m1;
+            maxMagE_m1 = maxMagEAv;
+        }
+        else
+        {
+            magEUnstableCount++;
+        }
+
         scalar minMagE = gMin(magE.internalField());
         if (Pstream::master())
             Info << runTime.timeIndex() << ": THRESH high min/max magE: " << minMagE << " " << maxMagE
                  << " maxMagEAv: " << maxMagEAv
                  << " deltaMaxMagE: " << deltaMaxMagE
+                 << " maxMagEAv3: " << maxMagEAv3
+                 << nl;
+    }
+    else
+    {
+        if ( deltaMaxMagE3 < 0.3 || (10 < magEUnstableCount) )
+        {
+            magEUnstableCount = 0;
+            maxMagE_m3 = maxMagE_m2;
+            maxMagE_m2 = maxMagE_m1;
+            maxMagE_m1 = maxMagE;
+        }
+        else
+        {
+            magEUnstableCount++;
+        }
+
+        if (enableDetailedLogs && !maxDENTdDtRate && Pstream::master())
+            Info << "maxMagEAv: " << maxMagEAv
+                 << " deltaMaxMagE: " << deltaMaxMagE
+                 << " maxMagEAv3: " << maxMagEAv3
                  << nl;
     }
 }

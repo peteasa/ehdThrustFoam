@@ -245,6 +245,7 @@ scalar maxMagE_m1 = maxMagE;
 scalar maxMagE_m2 = maxMagE;
 scalar maxMagE_m3 = maxMagE;
 scalar deltaMaxMagE = 0;
+int magEUnstableCount = 0;
 
 volScalarField magE_NTd
 (

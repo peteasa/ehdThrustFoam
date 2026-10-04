@@ -216,13 +216,13 @@ int main(int argc, char *argv[])
     int maxDRhoEDtRateDec = 0;
 
     // track the change in E/N
-    scalar maxDENTdDtRateThr = 1e9;
+    scalar maxDENTdDtRateThr = 1e8;
 
     // track the change in Pphys_raw
     scalar deltaPphysThr = 0.05;
 
     // track the change in magE
-    scalar deltaMaxMagEThr = 0.5;
+    scalar deltaMaxMagEThr = 0.9;
     /*************************************************************************/
 
     if (Pstream::master()) Info << "currentTime   = " << runTime.name() << nl;
