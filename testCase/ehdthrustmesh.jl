@@ -11,13 +11,13 @@ fractairfoillength = 0.1
 boundarylength = 0.3
 n_points_per_side=200
 top_elect_start = 0
-top_elect_end = 51
-top_tail_start = n_points_per_side - 30
-top_tail_end = n_points_per_side - top_elect_start + 1
-bottom_elect_start = n_points_per_side - top_elect_end + 1
-bottom_elect_end = n_points_per_side - top_elect_start + 1
-bottom_tail_start = n_points_per_side - top_tail_end + 1
-bottom_tail_end = n_points_per_side - top_tail_start + 1
+top_elect_end = 50 + 1
+top_tail_start = n_points_per_side - 30 - 1
+top_tail_end = n_points_per_side
+bottom_tail_start = 0
+bottom_tail_end = n_points_per_side - top_tail_start
+bottom_elect_start = n_points_per_side - top_elect_end
+bottom_elect_end = n_points_per_side
 n_thrust_surface_points = 2*n_points_per_side
 thrust_surface_length = 0.3
 thrust_surface_height = 0.1
@@ -27,6 +27,7 @@ electrode_radius=0.0007
 far_field_mesh_size=0.006
 pelement_mesh_size=0.0001
 electrode_mesh_size=0.0001
+tail_mesh_size=0.0004
 thrust_surface_mesh_size=0.001
 run(`./set_config_property.sh name unstructured_gmsh_$(electrode_mesh_size)_$(far_field_mesh_size)`)
 run(`./set_config_property.sh separation $(- electrode_position - electrode_radius)`)
@@ -41,7 +42,7 @@ open("ehdthrust.geo","w")do io
         if top_elect_start < i && i <= top_elect_end
            println(io,"Point($i) = {$(fractairfoillength*x), $(fractairfoillength*y(x)), 0.0,$electrode_mesh_size};")
         elseif top_tail_start < i && i <= top_tail_end
-           println(io,"Point($i) = {$(fractairfoillength*x), $(fractairfoillength*y(x)), 0.0,$electrode_mesh_size};")
+           println(io,"Point($i) = {$(fractairfoillength*x), $(fractairfoillength*y(x)), 0.0,$tail_mesh_size};")
         else
            println(io,"Point($i) = {$(fractairfoillength*x), $(fractairfoillength*y(x)), 0.0,$thrust_surface_mesh_size};")
         end
@@ -52,7 +53,7 @@ open("ehdthrust.geo","w")do io
         if bottom_elect_start < i && i <= bottom_elect_end
            println(io,"Point($(i+n_points_per_side)) = {$(fractairfoillength*x), $(-fractairfoillength*y(x)), 0.0,$electrode_mesh_size};")
         elseif bottom_tail_start < i && i <= bottom_tail_end
-           println(io,"Point($(i+n_points_per_side)) = {$(fractairfoillength*x), $(-fractairfoillength*y(x)), 0.0,$electrode_mesh_size};")
+           println(io,"Point($(i+n_points_per_side)) = {$(fractairfoillength*x), $(-fractairfoillength*y(x)), 0.0,$tail_mesh_size};")
         else
            println(io,"Point($(i+n_points_per_side)) = {$(fractairfoillength*x), $(-fractairfoillength*y(x)), 0.0,$thrust_surface_mesh_size};")
         end
@@ -102,16 +103,19 @@ open("ehdthrust.geo","w")do io
     # create the airfoil work round the airfoil Note work in consistent clockwise direction
     # the normal to the extruded surfaces will then point away from the airfoil
     # in practice paraFoam shows the normals point in the opposite direction
+    # finish each set on the first of the next set that has a different mesh size and also complete the loop
     upper_nu = wall_upper + 1
-    println(io,"Spline($l) = {$(top_elect_start+1):$top_elect_end};") ; l += 1
+    println(io,"Spline($l) = {$(top_elect_start+1):$(top_elect_end+1)};") ; l += 1
     upper_a = upper_nu + 1
-    println(io,"Spline($l) = {$top_elect_end:$top_tail_start};") ; l += 1
+    println(io,"Spline($l) = {$(top_elect_end+1):$(top_tail_start+1)};") ; l += 1
     upper_t = upper_a + 1
-    println(io,"Spline($l) = {$top_tail_start:$top_tail_end};") ; l += 1
+    println(io,"Spline($l) = {$(top_tail_start+1):$(top_tail_end+1)};") ; l += 1
+    # start each set on the last of the previous set, finish on the last of the set
     lower_t = upper_t + 1
     println(io,"Spline($l) = {$(n_points_per_side+bottom_tail_start+1):$(n_points_per_side+bottom_tail_end)};") ; l += 1
     lower_b = lower_t + 1
     println(io,"Spline($l) = {$(n_points_per_side+bottom_tail_end):$(n_points_per_side+bottom_elect_start)};") ; l += 1
+    # complete the loop by finishing on the first of the upper side
     lower_nu = lower_b + 1
     println(io,"Spline($l) = {$(n_points_per_side+bottom_elect_start):$(2*n_points_per_side), 1};") ; l += 1
     # println(io,"Line($l) = {$n_thrust_surface_points, 1};") ; l += 1
