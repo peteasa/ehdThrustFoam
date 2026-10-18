@@ -164,7 +164,7 @@ volScalarField magE
     mag(E)
 );
 
-label maxMagECell = 0;
+//label maxMagECell = 0;
 scalar maxMagE = gMax(magE.internalField());
 scalar maxMagE_m1 = maxMagE;
 scalar maxMagE_m2 = maxMagE;
@@ -186,8 +186,8 @@ volScalarField magE_NTdOld
     magE_NTd
 );
 
-label maxMagE_NTdCell = 0;
-label maxDENTdDtCell = 0;
+//label maxMagE_NTdCell = 0;
+//label maxDENTdDtCell = 0;
 
 // reference temperature for chemical reactions
 dimensionedScalar T0ChemRef
