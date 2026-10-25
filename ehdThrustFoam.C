@@ -500,9 +500,20 @@ int main(int argc, char *argv[])
                 if (!factorCh_old && deltaMaxMagEThr < deltaMaxMagE)
                 {
                     if (Pstream::master()) Info << "WARNING: magE is high" << nl;
-                    factorChange = true;
-
                     if (intervalCount % maxInterval) intervalCount++;
+                    if (!(intervalCount % maxInterval))
+                    {
+                        enableDetailedLogs = true;
+                        factMulti -= 1.0;
+                        if (factMulti < 1.0)
+                        {
+                            pwr -= 1;
+                            factMulti = 9.0;
+                        }
+
+                        factor = factMulti * pow(10.0, pwr);
+                        factorChange = true;
+                    }
                 }
                 else if (factorCh_old && ecoUpperThresh < maxEeCo && eeCoRateLimit < eeCoRate)
                 {
@@ -563,19 +574,20 @@ int main(int argc, char *argv[])
                 else if ( minRCyDec < 0 )
                 {
                     if (Pstream::master()) Info << "WARNING: correct for negative density" << nl;
-                    enableDetailedLogs = true;
-                    factMulti -= 1.0;
-                    if (factMulti < 1.0)
+                    if (intervalCount % maxInterval) intervalCount++;
+                    if (!(intervalCount % maxInterval))
                     {
-                        pwr -= 1;
-                        factMulti = 9.0;
+                        enableDetailedLogs = true;
+                        factMulti -= 1.0;
+                        if (factMulti < 1.0)
+                        {
+                            pwr -= 1;
+                            factMulti = 9.0;
+                        }
+
+                        factor = factMulti * pow(10.0, pwr);
+                        factorChange = true;
                     }
-
-                    factor = factMulti * pow(10.0, pwr);
-                    factorChange = true;
-
-                    if (intervalCount % maxInterval) intervalCount++;
-                    if (intervalCount % maxInterval) intervalCount++;
                 }
                 else if (ecoUpperThresh < maxEeCo)
                 {
