@@ -58,7 +58,7 @@ minMax
             << "minPhi maxPhi "
             << "minP maxP "
             << "minNe maxNe "
-            << "minNN2p maxNN2p "
+            << "minNO4p maxNO4p "
             << "minNO2m maxNO2m "
             << "minPhiE maxPhiE "
             << "minE maxE"
@@ -76,7 +76,7 @@ minMax
             scalar minPhi=NaN, maxPhi=NaN;
             scalar minP=NaN, maxP=NaN;
             scalar minNe=NaN, maxNe=NaN;
-            scalar minNN2p=NaN, maxNN2p=NaN;
+            scalar minNO4p=NaN, maxNO4p=NaN;
             scalar minNO2m=NaN, maxNO2m=NaN;
             scalar minPhiE=NaN, maxPhiE=NaN;
             scalar minE=NaN, maxE=NaN;
@@ -124,15 +124,15 @@ minMax
                 maxNe = gMax(magNe);
             }
 
-            // ---- nN2p ----
-            if (mesh().foundObject<volScalarField>("nN2p"))
+            // ---- nO4p ----
+            if (mesh().foundObject<volScalarField>("nO4p"))
             {
                 const volScalarField& f =
-                    mesh().lookupObject<volScalarField>("nN2p");
+                    mesh().lookupObject<volScalarField>("nO4p");
 
                 volScalarField magF(mag(f));
-                minNN2p = gMin(magF);
-                maxNN2p = gMax(magF);
+                minNO4p = gMin(magF);
+                maxNO4p = gMax(magF);
             }
 
             // ---- nO2m ----
@@ -174,7 +174,7 @@ minMax
                     << minPhi << " " << maxPhi << " "
                     << minP << " " << maxP << " "
                     << minNe << " " << maxNe << " "
-                    << minNN2p << " " << maxNN2p << " "
+                    << minNO4p << " " << maxNO4p << " "
                     << minNO2m << " " << maxNO2m << " "
                     << minPhiE << " " << maxPhiE << " "
                     << minE << " " << maxE
