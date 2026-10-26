@@ -30,7 +30,7 @@ solvers
         nPostSweeps        2;
         cacheAgglomeration on;
         agglomerator       faceAreaPair;
-        nCellsInCoarsestLevel 200;
+        nCellsInCoarsestLevel 100;
         mergeLevels        1;
     }
 
