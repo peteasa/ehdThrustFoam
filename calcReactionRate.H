@@ -139,8 +139,6 @@ magE_NTd = magE * kB * T0TransRef * 1e21 / Peff;
 
 if (!maxDENTdDtRate)
 {
-    //maxMagECell = findMax(magE);
-
     // calcReactionRate.H may be included multiple times
     // maxDENTdDtRate is calculated once
     scalar maxMagEAv = (maxMagE + maxMagE_m1 + maxMagE_m2 + maxMagE_m3)/4;
@@ -201,8 +199,6 @@ if (1)
         // maxDENTdDtRate is calculated once
         tmp<volScalarField> magDENTdDt = mag(magE_NTd - magE_NTdOld);
         scalar maxDENTdDt = gMax(magDENTdDt());
-        //maxMagE_NTdCell = findMax(magE_NTd);
-        //maxDENTdDtCell = findMax(magDENTdDt());
         maxDENTdDt /= runTime.deltaTValue();
         maxDENTdDtRate = maxDENTdDt / maxENTd;
 
@@ -210,18 +206,12 @@ if (1)
             Info << runTime.timeIndex() << ": min/max magE/N: " << minENTd << " " << maxENTd
                  << " maxDENTdDt: " << maxDENTdDtRate * maxENTd
                  << " maxDENTdDtRate: " << maxDENTdDtRate
-                 //<< " maxDENTdDt cell: " << maxDENTdDtCell
-                 //<< " maxMagE cell: " << maxMagECell
-                 //<< " maxMagE_NTd cell: " << maxMagE_NTdCell
                  << nl;
     }
 
     if (enableDetailedLogs && Pstream::master()) Info << "min/max magE/N: " << minENTd << " " << maxENTd
                                                 << " maxDENTdDt: " << maxDENTdDtRate * maxENTd
                                                 << " maxDENTdDtRate: " << maxDENTdDtRate
-                                                //<< " maxDENTdDt cell: " << maxDENTdDtCell
-                                                //<< " maxMagE cell: " << maxMagECell
-                                                //<< " maxMagE_NTd cell: " << maxMagE_NTdCell
                                                 << nl;
 }
 
@@ -331,9 +321,6 @@ if (enableDetailedLogs)
     scalar maxRrecN2p = gMax(RrecN2p.internalField());
     if (Pstream::master()) Info << "internal min/max RrecN2p: " << minRrecN2p << " " << maxRrecN2p
                                 << nl;
-
-    //label maxCell = findMax(RrecN2p);
-    //if (Pstream::master()) Info<< "cell with max RrecN2p = " << maxCell << nl;
 }
 
 // N2+ + O2- -> N2 + O2
@@ -346,9 +333,6 @@ if (enableDetailedLogs)
     scalar maxRiiN2p = gMax(RiiN2p.internalField());
     if (Pstream::master()) Info << "internal min/max RiiN2p: " << minRiiN2p << " " << maxRiiN2p
                                 << nl;
-
-    //label maxCell = findMax(RiiN2p);
-    //if (Pstream::master()) Info<< "cell with max RiiN2p = " << maxCell << nl;
 }
 
 chemReactionRate = mag(RionN2p) + mag(RattO2m) + mag(RdetO2e) + mag(RrecN2p) + mag(RiiN2p);
